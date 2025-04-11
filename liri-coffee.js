@@ -4,24 +4,23 @@
   const dataset = 'production';
   const apiVersion = '2024-03-19';
   
-  // Load coffee menu using Sanity GROQ API endpoint (CORS-friendly)
-  function loadCoffeeMenu() {
-    const container = document.querySelector('[data-liri-coffee]');
+  // Common function to load menu items
+  function loadMenuItems(config) {
+    const container = document.querySelector(config.selector);
     if (!container) {
-      console.error('Coffee menu container not found. Add data-liri-coffee attribute to your container div.');
+      console.error(`${config.name} menu container not found. Add ${config.selector} attribute to your container div.`);
       return;
     }
     
     // Show loading indicator
     const loadingIndicator = document.createElement('div');
     loadingIndicator.className = 'loading-indicator';
-    loadingIndicator.textContent = 'Loading coffee menu...';
+    loadingIndicator.textContent = `Loading ${config.name} menu...`;
     container.innerHTML = '';
     container.appendChild(loadingIndicator);
     
-    // Based on your actual schema, use the correct query
-    // coffeeItem schema has a direct price field, not prices array
-    const query = encodeURIComponent(`*[_type == "coffeeItem"] | order(orderRank asc) {
+    // Create query based on the document type
+    const query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
       _id, 
       title,
       price
@@ -39,11 +38,11 @@
         return response.json();
       })
       .then(data => {
-        console.log('Sanity data received:', data);
-        const coffeeItems = data.result || [];
+        console.log(`Sanity ${config.name} data received:`, data);
+        const menuItems = data.result || [];
         
-        if (!coffeeItems || coffeeItems.length === 0) {
-          container.innerHTML = '<div class="empty-menu">No coffee items found in Sanity</div>';
+        if (!menuItems || menuItems.length === 0) {
+          container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
           return;
         }
         
@@ -51,9 +50,9 @@
         const gridWrapper = document.createElement('div');
         gridWrapper.className = 'w-layout-grid menu-section-wrapper';
         
-        // Add each coffee item from Sanity
-        coffeeItems.forEach(item => {
-          console.log('Processing coffee item:', item);
+        // Add each menu item from Sanity
+        menuItems.forEach(item => {
+          console.log(`Processing ${config.name} item:`, item);
           
           const itemWrapper = document.createElement('div');
           itemWrapper.className = 'menu-item-wrapper';
@@ -62,9 +61,9 @@
           const priceText = typeof item.price === 'number' ? 
             item.price.toFixed(2).replace('.', ',') : '';
           
-          // If price is missing, skip this item or show error
+          // If price is missing, skip this item
           if (!priceText) {
-            console.error('Missing price for item:', item);
+            console.error(`Missing price for ${config.name} item:`, item);
             return; // Skip this item
           }
           
@@ -76,7 +75,7 @@
           if (typeof item.title === 'object' && item.title.en) {
             titleElement.textContent = item.title.en;
           } else {
-            console.error('Missing or invalid title for item:', item);
+            console.error(`Missing or invalid title for ${config.name} item:`, item);
             return; // Skip this item
           }
           
@@ -95,24 +94,52 @@
         });
         
         if (gridWrapper.children.length === 0) {
-          container.innerHTML = '<div class="error-message">Failed to load coffee menu. No valid items found.</div>';
+          container.innerHTML = `<div class="error-message">Failed to load ${config.name} menu. No valid items found.</div>`;
           return;
         }
         
         container.innerHTML = '';
         container.appendChild(gridWrapper);
-        console.log('Successfully loaded coffee data from Sanity');
+        console.log(`Successfully loaded ${config.name} data from Sanity`);
       })
       .catch(error => {
-        console.error('Error loading coffee data from Sanity:', error);
-        container.innerHTML = '<div class="error-message">Failed to load coffee menu from Sanity</div>';
+        console.error(`Error loading ${config.name} data from Sanity:`, error);
+        container.innerHTML = `<div class="error-message">Failed to load ${config.name} menu from Sanity</div>`;
       });
+  }
+  
+  // Define menu sections with their configurations
+  const menuConfigs = [
+    {
+      name: 'coffee',
+      selector: '[data-liri-coffee]',
+      documentType: 'coffeeItem'
+    },
+    {
+      name: 'tea',
+      selector: '[data-liri-tea]',
+      documentType: 'teaItem'
+    }
+    // Add more menu sections as needed:
+    // { name: 'wine', selector: '[data-liri-wine]', documentType: 'wineItem' }
+    // { name: 'spirits', selector: '[data-liri-spirits]', documentType: 'spiritItem' }
+  ];
+  
+  // Function to initialize all menu sections
+  function initializeMenus() {
+    menuConfigs.forEach(config => {
+      if (document.querySelector(config.selector)) {
+        loadMenuItems(config);
+      }
+    });
   }
   
   // Initialize when the DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadCoffeeMenu);
+    document.addEventListener('DOMContentLoaded', initializeMenus);
   } else {
-    loadCoffeeMenu();
+    initializeMenus();
   }
+
+  // Rename the file to liri-menu.js since it now handles multiple menu types
 })(); 
