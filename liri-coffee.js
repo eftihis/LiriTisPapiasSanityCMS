@@ -203,7 +203,7 @@
     });
     
     // Clear the container - but also render something in it to show it's working
-    container.innerHTML = `<div style="margin-bottom: 20px; color: #999;">Found ${cocktailItems.length} regular cocktails</div>`;
+    container.innerHTML = '';
     
     // Check if we have any cocktails
     let totalCocktails = 0;
