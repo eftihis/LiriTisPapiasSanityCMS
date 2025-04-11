@@ -147,6 +147,33 @@
 
   // Function to render regular cocktails by categories
   function renderRegularCocktailItems(container, cocktailItems, config) {
+    console.log("Starting to render regular cocktail items", cocktailItems);
+    
+    // More verbose debugging
+    console.log("All data attributes on the page:");
+    try {
+      // This syntax for selecting attributes with wildcard isn't widely supported,
+      // so let's use a different approach
+      const allElements = document.querySelectorAll('*');
+      for (const el of allElements) {
+        const liriAttrs = Array.from(el.attributes)
+          .filter(attr => attr.name.startsWith('data-liri-'))
+          .map(attr => attr.name);
+        
+        if (liriAttrs.length > 0) {
+          console.log(`Element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error selecting elements:", error);
+    }
+    
+    // Log all matching data-* elements for debugging
+    console.log("Available data containers for cocktails specifically:");
+    document.querySelectorAll('[data-liri-classics], [data-liri-g-and-t], [data-liri-spritz], [data-liri-tropical-touch], [data-liri-regular-cocktails]').forEach(el => {
+      console.log(`Found element with attribute: ${Array.from(el.attributes).filter(attr => attr.name.startsWith('data-liri')).map(attr => attr.name).join(', ')}`);
+    });
+    
     // Group cocktails by category
     const categorizedCocktails = {};
     
@@ -169,18 +196,21 @@
       const category = cocktail.category;
       if (category && categorizedCocktails.hasOwnProperty(category)) {
         categorizedCocktails[category].push(cocktail);
+        console.log(`Added cocktail to category ${category}:`, cocktail.title);
       } else {
         console.warn(`Cocktail has unknown category: ${category}`, cocktail);
       }
     });
     
-    // Clear the container
-    container.innerHTML = '';
+    // Clear the container - but also render something in it to show it's working
+    container.innerHTML = `<div style="margin-bottom: 20px; color: #999;">Found ${cocktailItems.length} regular cocktails</div>`;
     
     // Check if we have any cocktails
     let totalCocktails = 0;
     for (const category in categorizedCocktails) {
-      totalCocktails += categorizedCocktails[category].length;
+      const count = categorizedCocktails[category].length;
+      totalCocktails += count;
+      console.log(`Category ${category} has ${count} cocktails`);
     }
     
     if (totalCocktails === 0) {
@@ -194,7 +224,14 @@
       if (cocktails.length === 0) return; // Skip empty categories
       
       // Find the container for this category
-      const categorySelector = `[data-liri-${category.toLowerCase().replace('_', '-')}]`;
+      // The data attributes in HTML have dashes, not underscores
+      let categorySelector;
+      if (category === 'g_and_t') {
+        categorySelector = '[data-liri-g-and-t]'; // Special case for G&T
+      } else {
+        categorySelector = `[data-liri-${category.replace(/_/g, '-')}]`;
+      }
+      
       const categoryContainer = document.querySelector(categorySelector);
       
       if (!categoryContainer) {
