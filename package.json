@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@sanity/types": "^3.84.0",
+    "@types/node": "^22.14.0"
+  }
+}
