@@ -119,6 +119,21 @@
       name: 'tea',
       selector: '[data-liri-tea]',
       documentType: 'teaItem'
+    },
+    {
+      name: 'soft drinks',
+      selector: '[data-liri-softdrinks]',
+      documentType: 'softDrinkItem'
+    },
+    {
+      name: 'sparkling water',
+      selector: '[data-liri-sparklingwater]',
+      documentType: 'sparklingWaterItem'
+    },
+    {
+      name: 'juices',
+      selector: '[data-liri-juices]',
+      documentType: 'juiceItem'
     }
     // Add more menu sections as needed:
     // { name: 'wine', selector: '[data-liri-wine]', documentType: 'wineItem' }
