@@ -67,12 +67,10 @@ export default defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Classic Cocktails', value: 'classic'},
+          {title: 'Classics', value: 'classics'},
+          {title: 'G&T', value: 'g_and_t'},
           {title: 'Spritz', value: 'spritz'},
-          {title: 'Mocktails', value: 'mocktails'},
-          {title: 'Margaritas', value: 'margaritas'},
-          {title: 'Mojitos', value: 'mojitos'},
-          {title: 'Other', value: 'other'}
+          {title: 'Tropical Touch', value: 'tropical_touch'}
         ]
       },
       validation: (Rule) => Rule.required()
