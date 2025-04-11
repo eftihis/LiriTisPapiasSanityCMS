@@ -32,6 +32,15 @@
         cocktailTags[]->{ name },
         isNew
       }`);
+    } else if (config.template === 'regularCocktail') {
+      // Special query for regular cocktails including category and optional description
+      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
+        _id, 
+        title,
+        price,
+        description,
+        category
+      }`);
     } else {
       // Standard query for simple menu items
       query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
@@ -64,6 +73,8 @@
         // Choose the appropriate rendering method based on template
         if (config.template === 'cocktail') {
           renderCocktailItems(container, menuItems, config);
+        } else if (config.template === 'regularCocktail') {
+          renderRegularCocktailItems(container, menuItems, config);
         } else {
           renderStandardMenuItems(container, menuItems, config);
         }
@@ -132,6 +143,141 @@
     
     container.innerHTML = '';
     container.appendChild(gridWrapper);
+  }
+
+  // Function to render regular cocktails by categories
+  function renderRegularCocktailItems(container, cocktailItems, config) {
+    // Group cocktails by category
+    const categorizedCocktails = {};
+    
+    // Define expected categories in the order they should appear
+    const categoryOrder = ['classics', 'g_and_t', 'spritz', 'tropical_touch'];
+    const categoryLabels = {
+      'classics': 'Classics',
+      'g_and_t': 'G&T',
+      'spritz': 'Spritz',
+      'tropical_touch': 'Tropical Touch'
+    };
+    
+    // Initialize categories
+    categoryOrder.forEach(category => {
+      categorizedCocktails[category] = [];
+    });
+    
+    // Group cocktails by their category
+    cocktailItems.forEach(cocktail => {
+      const category = cocktail.category;
+      if (category && categorizedCocktails.hasOwnProperty(category)) {
+        categorizedCocktails[category].push(cocktail);
+      } else {
+        console.warn(`Cocktail has unknown category: ${category}`, cocktail);
+      }
+    });
+    
+    // Clear the container
+    container.innerHTML = '';
+    
+    // Check if we have any cocktails
+    let totalCocktails = 0;
+    for (const category in categorizedCocktails) {
+      totalCocktails += categorizedCocktails[category].length;
+    }
+    
+    if (totalCocktails === 0) {
+      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      return;
+    }
+    
+    // Create containers for each category section in the defined order
+    categoryOrder.forEach(category => {
+      const cocktails = categorizedCocktails[category];
+      if (cocktails.length === 0) return; // Skip empty categories
+      
+      // Find the container for this category
+      const categorySelector = `[data-liri-${category.toLowerCase().replace('_', '-')}]`;
+      const categoryContainer = document.querySelector(categorySelector);
+      
+      if (!categoryContainer) {
+        console.warn(`Container for category ${category} not found with selector ${categorySelector}`);
+        return;
+      }
+      
+      // Create the grid wrapper for this category
+      const gridWrapper = document.createElement('div');
+      gridWrapper.className = 'w-layout-grid accordion-content';
+      gridWrapper.style.width = '522.5px';
+      
+      // Add top spacer
+      const topSpacer = document.createElement('div');
+      topSpacer.className = 'spacer-small';
+      gridWrapper.appendChild(topSpacer);
+      
+      // Add each cocktail in this category
+      cocktails.forEach(cocktail => {
+        const itemWrapper = document.createElement('div');
+        itemWrapper.id = `w-node-${generateRandomId()}`;
+        itemWrapper.className = 'menu-item-wrapper';
+        
+        // Create title bar with dots and price
+        const titleGrid = document.createElement('div');
+        titleGrid.className = 'w-layout-grid menu-item-tittle';
+        
+        // Create title element
+        const titleElement = document.createElement('div');
+        titleElement.id = `w-node-${generateRandomId()}`;
+        if (typeof cocktail.title === 'object' && cocktail.title.en) {
+          titleElement.textContent = cocktail.title.en;
+        } else if (typeof cocktail.title === 'string') {
+          titleElement.textContent = cocktail.title;
+        } else {
+          console.warn('Invalid cocktail title', cocktail);
+          return; // Skip this item
+        }
+        
+        // Create dots element
+        const dotsElement = document.createElement('div');
+        dotsElement.id = `w-node-${generateRandomId()}`;
+        dotsElement.className = 'menu-item-dots';
+        
+        // Create price element
+        const priceElement = document.createElement('div');
+        priceElement.id = `w-node-${generateRandomId()}`;
+        const priceText = typeof cocktail.price === 'number' ? 
+          cocktail.price.toFixed(2).replace('.', ',') : '';
+        priceElement.textContent = priceText;
+        
+        // Add components to title grid
+        titleGrid.appendChild(titleElement);
+        titleGrid.appendChild(dotsElement);
+        titleGrid.appendChild(priceElement);
+        itemWrapper.appendChild(titleGrid);
+        
+        // Add description if available
+        if (cocktail.description) {
+          const descriptionElement = document.createElement('div');
+          descriptionElement.className = 'menu-item-description';
+          
+          if (typeof cocktail.description === 'object' && cocktail.description.en) {
+            descriptionElement.textContent = cocktail.description.en;
+          } else if (typeof cocktail.description === 'string') {
+            descriptionElement.textContent = cocktail.description;
+          }
+          
+          itemWrapper.appendChild(descriptionElement);
+        }
+        
+        gridWrapper.appendChild(itemWrapper);
+      });
+      
+      // Add bottom spacer
+      const bottomSpacer = document.createElement('div');
+      bottomSpacer.className = 'spacer-small';
+      gridWrapper.appendChild(bottomSpacer);
+      
+      // Add the grid to the category container
+      categoryContainer.innerHTML = '';
+      categoryContainer.appendChild(gridWrapper);
+    });
   }
   
   // Function to render cocktail items with complex structure
@@ -318,6 +464,13 @@
     container.appendChild(gridWrapper);
   }
   
+  // Helper function to generate random IDs for w-node elements
+  function generateRandomId() {
+    return Array.from({ length: 24 }, () => 
+      "0123456789abcdef"[Math.floor(Math.random() * 16)]
+    ).join('');
+  }
+  
   // Define menu sections with their configurations
   const menuConfigs = [
     {
@@ -355,6 +508,12 @@
       selector: '[data-liri-cocktails]',
       documentType: 'signatureCocktailItem',
       template: 'cocktail'
+    },
+    {
+      name: 'regular cocktails',
+      selector: '[data-liri-regular-cocktails]',
+      documentType: 'regularCocktailItem',
+      template: 'regularCocktail'
     }
     // Add more menu sections as needed:
     // { name: 'wine', selector: '[data-liri-wine]', documentType: 'wineItem', template: 'standard' }
