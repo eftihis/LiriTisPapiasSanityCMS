@@ -518,6 +518,51 @@
   function renderWineItems(container, wineItems, config) {
     console.log("Starting to render wine items", wineItems);
     
+    // Add debugging to check for wine containers
+    console.log("Looking for wine containers on the page:");
+    const allElements = document.querySelectorAll('*');
+    let foundWineContainers = false;
+    for (const el of allElements) {
+      const liriAttrs = Array.from(el.attributes || [])
+        .filter(attr => attr.name && attr.name.toLowerCase().startsWith('data-liri-') && 
+                (attr.name.toLowerCase().includes('wine') || attr.name.toLowerCase().includes('red-wine') || 
+                 attr.name.toLowerCase().includes('white-wine') || attr.name.toLowerCase().includes('rose-wine') || 
+                 attr.name.toLowerCase().includes('sparkling-wine')))
+        .map(attr => attr.name);
+      
+      if (liriAttrs.length > 0) {
+        console.log(`Found element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
+        console.log("Element HTML:", el.outerHTML.substring(0, 100) + "...");
+        foundWineContainers = true;
+      }
+    }
+    
+    if (!foundWineContainers) {
+      console.error("NO WINE CONTAINERS FOUND - check HTML for correct data-liri-* attributes");
+      
+      // Let's specifically check if the structures in your HTML exist
+      console.log("Checking for specific wine section structure:");
+      const wineSection = document.querySelector('section#wine.wine_section');
+      if (wineSection) {
+        console.log("Found wine section with ID 'wine'");
+        
+        // Check for the div structure inside
+        const redWineDiv = wineSection.querySelector('[data-liri-red-wine]');
+        console.log("Red wine div exists:", !!redWineDiv);
+        
+        const whiteWineDiv = wineSection.querySelector('[data-liri-white-wine]');
+        console.log("White wine div exists:", !!whiteWineDiv);
+        
+        const roseWineDiv = wineSection.querySelector('[data-liri-rose-wine]');
+        console.log("Rose wine div exists:", !!roseWineDiv);
+        
+        const sparklingWineDiv = wineSection.querySelector('[data-liri-sparkling-wine]');
+        console.log("Sparkling wine div exists:", !!sparklingWineDiv);
+      } else {
+        console.error("Wine section with ID 'wine' not found");
+      }
+    }
+    
     // Group wines by their subcategory
     const categorizedWines = {};
     
@@ -529,6 +574,24 @@
       'rose-wine': 'Rosé Wine',
       'sparkling-wine': 'Sparkling Wine'
     };
+    
+    // Also check for possible case variants of these categories in the HTML
+    console.log("Checking for case variants of wine category attributes:");
+    categoryOrder.forEach(category => {
+      const variants = [
+        `data-liri-${category}`,
+        `data-liri-${category.toUpperCase()}`,
+        `data-liri-${category.toLowerCase()}`,
+        `data-liri-${category.replace(/-/g, '_')}`
+      ];
+      
+      variants.forEach(variant => {
+        const elements = document.querySelectorAll(`[${variant}]`);
+        if (elements.length > 0) {
+          console.log(`Found ${elements.length} elements with attribute ${variant}`);
+        }
+      });
+    });
     
     // Initialize categories
     categoryOrder.forEach(category => {
@@ -546,9 +609,6 @@
       }
     });
     
-    // Clear the container
-    container.innerHTML = '';
-    
     // Check if we have any wines
     let totalWines = 0;
     for (const category in categorizedWines) {
@@ -562,20 +622,108 @@
       return;
     }
     
-    // Create containers for each category section in the defined order
+    // Special handling - if no category containers exist, create them in the main container
+    let needToCreateCategoryContainers = true;
+    
+    // Check if any category containers actually exist
+    for (const category of categoryOrder) {
+      const selector = `[data-liri-${category}]`;
+      if (document.querySelector(selector)) {
+        needToCreateCategoryContainers = false;
+        break;
+      }
+    }
+    
+    // If no category containers exist, we'll create them all in the main container
+    if (needToCreateCategoryContainers) {
+      console.log("No wine category containers found - creating them in the main container");
+      
+      // Clear the main container
+      container.innerHTML = '';
+      
+      // Create a grid for all wine categories
+      const mainGrid = document.createElement('div');
+      mainGrid.className = 'w-layout-grid _2col_grid';
+      container.appendChild(mainGrid);
+      
+      // Create containers for each category
+      categoryOrder.forEach(category => {
+        const wines = categorizedWines[category];
+        if (wines.length === 0) return; // Skip empty categories
+        
+        // Section wrapper
+        const sectionWrapper = document.createElement('div');
+        sectionWrapper.className = 'menu-section-wrapper';
+        
+        // Title wrapper
+        const titleWrapper = document.createElement('div');
+        titleWrapper.className = 'menu-section-tittle-wrapper';
+        
+        // Title text
+        const titleText = document.createElement('div');
+        titleText.className = 'text-block';
+        titleText.textContent = categoryLabels[category];
+        titleWrapper.appendChild(titleText);
+        
+        // Category container with data attribute
+        const categoryContainer = document.createElement('div');
+        categoryContainer.setAttribute(`data-liri-${category}`, '');
+        
+        // Add to section
+        sectionWrapper.appendChild(titleWrapper);
+        sectionWrapper.appendChild(categoryContainer);
+        
+        // Add to main grid
+        mainGrid.appendChild(sectionWrapper);
+        
+        // Now populate this category container
+        populateWineCategory(categoryContainer, wines, category);
+      });
+      
+      return; // We've handled everything in this case
+    }
+    
+    // Original flow - categories exist, populate them
     categoryOrder.forEach(category => {
       const wines = categorizedWines[category];
       if (wines.length === 0) return; // Skip empty categories
       
       // Find the container for this category
       const categorySelector = `[data-liri-${category}]`;
-      const categoryContainer = document.querySelector(categorySelector);
+      let categoryContainer = document.querySelector(categorySelector);
+      
+      // Try different selector variations if needed
+      if (!categoryContainer) {
+        console.warn(`Container for wine category ${category} not found with selector ${categorySelector}, trying alternative selector`);
+        
+        // Try alternatives - either the attribute might be empty or might have a value
+        const alternativeSelectors = [
+          `[data-liri-${category}=""]`,  // Empty value
+          `div[data-liri-${category}]`,  // Specifically a div
+          `*[data-liri-${category}]`     // Any element with wildcard
+        ];
+        
+        for (const altSelector of alternativeSelectors) {
+          const altContainer = document.querySelector(altSelector);
+          if (altContainer) {
+            console.log(`Found container with alternative selector: ${altSelector}`);
+            categoryContainer = altContainer;
+            break;
+          }
+        }
+      }
       
       if (!categoryContainer) {
-        console.warn(`Container for wine category ${category} not found with selector ${categorySelector}`);
+        console.warn(`Container for wine category ${category} not found with any selector, skipping this category`);
         return;
       }
       
+      // Populate this category
+      populateWineCategory(categoryContainer, wines, category);
+    });
+    
+    // Helper function to populate a single wine category
+    function populateWineCategory(categoryContainer, wines, category) {
       // Create the grid wrapper for this category
       const gridWrapper = document.createElement('div');
       gridWrapper.className = 'w-layout-grid menu-section-wrapper';
@@ -673,7 +821,7 @@
       // Add the grid to the category container
       categoryContainer.innerHTML = '';
       categoryContainer.appendChild(gridWrapper);
-    });
+    }
   }
   
   // Helper function to generate random IDs for w-node elements
@@ -739,10 +887,65 @@
   
   // Function to initialize all menu sections
   function initializeMenus() {
+    // First, check the wine container situation and fix any case mismatches
+    fixWineContainerAttributes();
+    
     menuConfigs.forEach(config => {
       if (document.querySelector(config.selector)) {
         loadMenuItems(config);
       }
+    });
+  }
+  
+  // Function to fix potential issues with wine container attributes
+  function fixWineContainerAttributes() {
+    console.log("Checking and fixing wine container attribute cases...");
+    
+    // The correct format we expect for the wine data attributes
+    const correctAttributeNames = [
+      'data-liri-red-wine',
+      'data-liri-white-wine', 
+      'data-liri-rose-wine',
+      'data-liri-sparkling-wine',
+      'data-liri-wine'
+    ];
+    
+    // Check all elements on the page
+    const allElements = document.querySelectorAll('*');
+    
+    // Look for potential mismatched wine attributes
+    allElements.forEach(el => {
+      // Check if element has any attributes
+      if (!el.attributes || el.attributes.length === 0) return;
+      
+      // Loop through all attributes
+      Array.from(el.attributes).forEach(attr => {
+        // Skip if not a data attribute
+        if (!attr.name.toLowerCase().startsWith('data-')) return;
+        
+        // Check if it might be a wine attribute with incorrect casing
+        if (attr.name.toLowerCase().includes('wine')) {
+          // Check if it matches any of our expected attributes but with different case
+          const matchedAttribute = correctAttributeNames.find(
+            correctAttr => correctAttr.toLowerCase() === attr.name.toLowerCase()
+          );
+          
+          if (matchedAttribute && matchedAttribute !== attr.name) {
+            console.log(`Found mismatched case attribute: ${attr.name} - correcting to ${matchedAttribute}`);
+            
+            // Store the value
+            const value = el.getAttribute(attr.name);
+            
+            // Remove the incorrectly cased attribute
+            el.removeAttribute(attr.name);
+            
+            // Add with correct case
+            el.setAttribute(matchedAttribute, value || '');
+            
+            console.log(`Corrected attribute on element:`, el.outerHTML.substring(0, 100) + "...");
+          }
+        }
+      });
     });
   }
   
