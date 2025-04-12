@@ -4,6 +4,54 @@
   const dataset = 'production';
   const apiVersion = '2024-03-19';
   
+  // Cache configuration
+  const CACHE_ENABLED = true;
+  const CACHE_EXPIRATION = 3600000; // Cache expiration in milliseconds (1 hour)
+  const CACHE_VERSION = '1.0'; // Used to invalidate cache when the structure changes
+  
+  // Cache helper functions
+  function getCacheKey(documentType) {
+    return `liri-menu-${CACHE_VERSION}-${documentType}`;
+  }
+  
+  function saveToCache(documentType, data) {
+    if (!CACHE_ENABLED) return;
+    try {
+      const cacheItem = {
+        timestamp: Date.now(),
+        data: data
+      };
+      localStorage.setItem(getCacheKey(documentType), JSON.stringify(cacheItem));
+      console.log(`Cached data for ${documentType}`);
+    } catch (error) {
+      console.warn('Failed to save to cache:', error);
+    }
+  }
+  
+  function getFromCache(documentType) {
+    if (!CACHE_ENABLED) return null;
+    try {
+      const cacheItem = localStorage.getItem(getCacheKey(documentType));
+      if (!cacheItem) return null;
+      
+      const parsedItem = JSON.parse(cacheItem);
+      const now = Date.now();
+      
+      // Check if cache is expired
+      if (now - parsedItem.timestamp > CACHE_EXPIRATION) {
+        console.log(`Cache expired for ${documentType}, fetching fresh data`);
+        localStorage.removeItem(getCacheKey(documentType));
+        return null;
+      }
+      
+      console.log(`Using cached data for ${documentType} (${Math.round((now - parsedItem.timestamp) / 1000)}s old)`);
+      return parsedItem.data;
+    } catch (error) {
+      console.warn('Failed to retrieve from cache:', error);
+      return null;
+    }
+  }
+  
   // Create a function for the enhanced loading indicator
   function createLoadingIndicator(name) {
     // Create main container
@@ -53,6 +101,13 @@
     // Show loading indicator
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
+    
+    // Check cache first
+    const cachedData = getFromCache(config.documentType);
+    if (cachedData) {
+      processMenuData(cachedData, container, config);
+      return;
+    }
     
     // Create query based on the document type and template type
     let query;
@@ -133,34 +188,44 @@
       })
       .then(data => {
         console.log(`Sanity ${config.name} data received:`, data);
-        const menuItems = data.result || [];
         
-        if (!menuItems || menuItems.length === 0) {
-          container.innerHTML = createEmptyMessage(config.name);
-          return;
-        }
+        // Save to cache for future use
+        saveToCache(config.documentType, data);
         
-        // Choose the appropriate rendering method based on template
-        if (config.template === 'cocktail') {
-          renderCocktailItems(container, menuItems, config);
-        } else if (config.template === 'regularCocktail') {
-          renderRegularCocktailItems(container, menuItems, config);
-        } else if (config.template === 'wine') {
-          renderWineItems(container, menuItems, config);
-        } else if (config.template === 'beer') {
-          renderBeerItems(container, menuItems, config);
-        } else if (config.template === 'spirit') {
-          renderSpiritItems(container, menuItems, config);
-        } else {
-          renderStandardMenuItems(container, menuItems, config);
-        }
-        
-        console.log(`Successfully loaded ${config.name} data from Sanity`);
+        // Process the data
+        processMenuData(data, container, config);
       })
       .catch(error => {
         console.error(`Error loading ${config.name} data from Sanity:`, error);
         container.innerHTML = createErrorMessage(`Failed to load ${config.name} menu from Sanity`);
       });
+  }
+  
+  // Process and render menu data
+  function processMenuData(data, container, config) {
+    const menuItems = data.result || [];
+    
+    if (!menuItems || menuItems.length === 0) {
+      container.innerHTML = createEmptyMessage(config.name);
+      return;
+    }
+    
+    // Choose the appropriate rendering method based on template
+    if (config.template === 'cocktail') {
+      renderCocktailItems(container, menuItems, config);
+    } else if (config.template === 'regularCocktail') {
+      renderRegularCocktailItems(container, menuItems, config);
+    } else if (config.template === 'wine') {
+      renderWineItems(container, menuItems, config);
+    } else if (config.template === 'beer') {
+      renderBeerItems(container, menuItems, config);
+    } else if (config.template === 'spirit') {
+      renderSpiritItems(container, menuItems, config);
+    } else {
+      renderStandardMenuItems(container, menuItems, config);
+    }
+    
+    console.log(`Successfully rendered ${config.name} data`);
   }
   
   // Function to render standard menu items (coffee, tea, etc.)
@@ -1539,6 +1604,13 @@
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator('spirits'));
     
+    // Check cache first
+    const cachedData = getFromCache('spiritItem');
+    if (cachedData) {
+      processSpiritData(cachedData, container);
+      return;
+    }
+    
     // Configuration for Sanity API
     const projectId = 'ivfy9y3f';
     const dataset = 'production';
@@ -1571,72 +1643,12 @@
       })
       .then(data => {
         console.log(`Spirit data received:`, data);
-        const spiritItems = data.result || [];
         
-        if (!spiritItems || spiritItems.length === 0) {
-          container.innerHTML = '';
-          container.appendChild(createEmptyMessage('spirits'));
-          return;
-        }
+        // Save to cache for future use
+        saveToCache('spiritItem', data);
         
-        // Group spirits by category
-        const spiritsByCategory = {};
-        
-        // Process each spirit item
-        spiritItems.forEach(spirit => {
-          const category = spirit.subCategory;
-          if (!category) return;
-          
-          // Create category array if it doesn't exist
-          if (!spiritsByCategory[category]) {
-            spiritsByCategory[category] = [];
-          }
-          
-          // Add spirit to its category
-          spiritsByCategory[category].push(spirit);
-        });
-        
-        // Sort each category alphabetically
-        Object.keys(spiritsByCategory).forEach(category => {
-          spiritsByCategory[category].sort((a, b) => {
-            const titleA = (typeof a.title === 'object') ? a.title.en : a.title;
-            const titleB = (typeof b.title === 'object') ? b.title.en : b.title;
-            return titleA.localeCompare(titleB);
-          });
-        });
-        
-        // Log what we found
-        Object.keys(spiritsByCategory).forEach(category => {
-          console.log(`Found ${spiritsByCategory[category].length} items for ${category}`);
-        });
-        
-        // Process each category directly
-        const categories = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
-                            'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
-        
-        categories.forEach(category => {
-          const spirits = spiritsByCategory[category] || [];
-          if (spirits.length === 0) {
-            console.log(`No spirits found for category: ${category}`);
-            return;
-          }
-          
-          // Try to find the container directly
-          const categoryContainer = document.querySelector(`[data-liri-spirit-${category}]`);
-          if (!categoryContainer) {
-            console.log(`Container not found for ${category}`);
-            return;
-          }
-          
-          console.log(`Found container for ${category}, populating with ${spirits.length} items`);
-          
-          // Show loading indicator in category container
-          categoryContainer.innerHTML = '';
-          categoryContainer.appendChild(createLoadingIndicator(category));
-          
-          // Create content
-          renderSpiritCategory(categoryContainer, spirits);
-        });
+        // Process the data
+        processSpiritData(data, container);
       })
       .catch(error => {
         console.error("Error loading spirit data:", error);
@@ -1645,6 +1657,76 @@
       });
   }
 
+  // Process and render spirit data
+  function processSpiritData(data, container) {
+    const spiritItems = data.result || [];
+    
+    if (!spiritItems || spiritItems.length === 0) {
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage('spirits'));
+      return;
+    }
+    
+    // Group spirits by category
+    const spiritsByCategory = {};
+    
+    // Process each spirit item
+    spiritItems.forEach(spirit => {
+      const category = spirit.subCategory;
+      if (!category) return;
+      
+      // Create category array if it doesn't exist
+      if (!spiritsByCategory[category]) {
+        spiritsByCategory[category] = [];
+      }
+      
+      // Add spirit to its category
+      spiritsByCategory[category].push(spirit);
+    });
+    
+    // Sort each category alphabetically
+    Object.keys(spiritsByCategory).forEach(category => {
+      spiritsByCategory[category].sort((a, b) => {
+        const titleA = (typeof a.title === 'object') ? a.title.en : a.title;
+        const titleB = (typeof b.title === 'object') ? b.title.en : b.title;
+        return titleA.localeCompare(titleB);
+      });
+    });
+    
+    // Log what we found
+    Object.keys(spiritsByCategory).forEach(category => {
+      console.log(`Found ${spiritsByCategory[category].length} items for ${category}`);
+    });
+    
+    // Process each category directly
+    const categories = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
+                        'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
+    
+    categories.forEach(category => {
+      const spirits = spiritsByCategory[category] || [];
+      if (spirits.length === 0) {
+        console.log(`No spirits found for category: ${category}`);
+        return;
+      }
+      
+      // Try to find the container directly
+      const categoryContainer = document.querySelector(`[data-liri-spirit-${category}]`);
+      if (!categoryContainer) {
+        console.log(`Container not found for ${category}`);
+        return;
+      }
+      
+      console.log(`Found container for ${category}, populating with ${spirits.length} items`);
+      
+      // Show loading indicator in category container
+      categoryContainer.innerHTML = '';
+      categoryContainer.appendChild(createLoadingIndicator(category));
+      
+      // Create content
+      renderSpiritCategory(categoryContainer, spirits);
+    });
+  }
+  
   // Function to render a single spirit category
   function renderSpiritCategory(container, spirits) {
     // Create the content wrapper
