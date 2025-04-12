@@ -1591,23 +1591,35 @@
   
   // Add a new standalone function for loading and rendering spirits
   function loadSpiritMenuItems() {
-    console.log("Loading spirit menu items directly...");
+    console.log("Loading spirit items directly into category containers...");
     
-    // Use main container as fallback
-    const container = document.querySelector('[data-liri-spirits]');
-    if (!container) {
-      console.error("Main spirits container not found. Ensure there's an element with [data-liri-spirits] attribute.");
+    // Check for spirit category containers
+    const spiritCategories = [
+      'vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
+      'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'
+    ];
+    
+    let foundAnyContainer = false;
+    spiritCategories.forEach(category => {
+      const selector = `[data-liri-spirit-${category}]`;
+      const container = document.querySelector(selector);
+      if (container) {
+        foundAnyContainer = true;
+        // Show loading indicator in each category container
+        container.innerHTML = '';
+        container.appendChild(createLoadingIndicator(category));
+      }
+    });
+    
+    if (!foundAnyContainer) {
+      console.warn("No spirit category containers found. Add elements with data-liri-spirit-[category] attributes.");
       return;
     }
-    
-    // Show loading indicator
-    container.innerHTML = '';
-    container.appendChild(createLoadingIndicator('spirits'));
     
     // Check cache first
     const cachedData = getFromCache('spiritItem');
     if (cachedData) {
-      processSpiritData(cachedData, container);
+      processSpiritData(cachedData);
       return;
     }
     
@@ -1648,22 +1660,27 @@
         saveToCache('spiritItem', data);
         
         // Process the data
-        processSpiritData(data, container);
+        processSpiritData(data);
       })
       .catch(error => {
         console.error("Error loading spirit data:", error);
-        container.innerHTML = '';
-        container.appendChild(createErrorMessage("Failed to load spirits menu"));
+        // Show error in all category containers
+        spiritCategories.forEach(category => {
+          const container = document.querySelector(`[data-liri-spirit-${category}]`);
+          if (container) {
+            container.innerHTML = '';
+            container.appendChild(createErrorMessage("Failed to load spirits menu"));
+          }
+        });
       });
   }
 
   // Process and render spirit data
-  function processSpiritData(data, container) {
+  function processSpiritData(data) {
     const spiritItems = data.result || [];
     
     if (!spiritItems || spiritItems.length === 0) {
-      container.innerHTML = '';
-      container.appendChild(createEmptyMessage('spirits'));
+      console.warn("No spirit items found in the data");
       return;
     }
     
@@ -1704,23 +1721,22 @@
     
     categories.forEach(category => {
       const spirits = spiritsByCategory[category] || [];
-      if (spirits.length === 0) {
-        console.log(`No spirits found for category: ${category}`);
-        return;
-      }
       
       // Try to find the container directly
       const categoryContainer = document.querySelector(`[data-liri-spirit-${category}]`);
       if (!categoryContainer) {
-        console.log(`Container not found for ${category}`);
+        console.log(`Container not found for ${category}, skipping`);
+        return;
+      }
+      
+      if (spirits.length === 0) {
+        console.log(`No spirits found for category: ${category}`);
+        categoryContainer.innerHTML = '';
+        categoryContainer.appendChild(createEmptyMessage(category));
         return;
       }
       
       console.log(`Found container for ${category}, populating with ${spirits.length} items`);
-      
-      // Show loading indicator in category container
-      categoryContainer.innerHTML = '';
-      categoryContainer.appendChild(createLoadingIndicator(category));
       
       // Create content
       renderSpiritCategory(categoryContainer, spirits);
