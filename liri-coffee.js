@@ -52,6 +52,16 @@
         glassPrice,
         bottlePrice
       }`);
+    } else if (config.template === 'beer') {
+      // Special query for beers including type and optional description
+      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
+        _id, 
+        title,
+        price,
+        description,
+        beerType,
+        size
+      }`);
     } else {
       // Standard query for simple menu items
       query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
@@ -88,6 +98,8 @@
           renderRegularCocktailItems(container, menuItems, config);
         } else if (config.template === 'wine') {
           renderWineItems(container, menuItems, config);
+        } else if (config.template === 'beer') {
+          renderBeerItems(container, menuItems, config);
         } else {
           renderStandardMenuItems(container, menuItems, config);
         }
@@ -824,6 +836,237 @@
     }
   }
   
+  // Function to render beer items by type
+  function renderBeerItems(container, beerItems, config) {
+    console.log("Starting to render beer items", beerItems);
+    
+    // Group beers by their beerType
+    const categorizedBeers = {};
+    
+    // Define expected categories in the order they should appear
+    const categoryOrder = ['local', 'imported'];
+    const categoryLabels = {
+      'local': 'Greek Microbreweries',
+      'imported': 'Imported Beers'
+    };
+    
+    // Initialize categories
+    categoryOrder.forEach(category => {
+      categorizedBeers[category] = [];
+    });
+    
+    // Group beers by their type
+    beerItems.forEach(beer => {
+      const category = beer.beerType;
+      if (category && categorizedBeers.hasOwnProperty(category)) {
+        categorizedBeers[category].push(beer);
+        console.log(`Added beer to category ${category}:`, beer.title);
+      } else {
+        console.warn(`Beer has unknown category: ${category}`, beer);
+      }
+    });
+    
+    // Check if we have any beers
+    let totalBeers = 0;
+    for (const category in categorizedBeers) {
+      const count = categorizedBeers[category].length;
+      totalBeers += count;
+      console.log(`Category ${category} has ${count} beers`);
+    }
+    
+    if (totalBeers === 0) {
+      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      return;
+    }
+    
+    // Special handling - if no category containers exist, create them in the main container
+    let needToCreateCategoryContainers = true;
+    
+    // Check if any category containers actually exist
+    for (const category of categoryOrder) {
+      const selector = `[data-liri-beer-${category}]`;
+      if (document.querySelector(selector)) {
+        needToCreateCategoryContainers = false;
+        break;
+      }
+    }
+    
+    // If no category containers exist, we'll create them all in the main container
+    if (needToCreateCategoryContainers) {
+      console.log("No beer category containers found - creating them in the main container");
+      
+      // Clear the main container
+      container.innerHTML = '';
+      
+      // Create a grid for all beer categories
+      const mainGrid = document.createElement('div');
+      mainGrid.className = 'w-layout-grid _2col_grid';
+      container.appendChild(mainGrid);
+      
+      // Create containers for each category
+      categoryOrder.forEach(category => {
+        const beers = categorizedBeers[category];
+        if (beers.length === 0) return; // Skip empty categories
+        
+        // Section wrapper
+        const sectionWrapper = document.createElement('div');
+        sectionWrapper.className = 'menu-section-wrapper';
+        
+        // Title wrapper
+        const titleWrapper = document.createElement('div');
+        titleWrapper.className = 'menu-section-tittle-wrapper';
+        
+        // Title text
+        const titleText = document.createElement('div');
+        titleText.className = 'text-block';
+        titleText.textContent = categoryLabels[category];
+        titleWrapper.appendChild(titleText);
+        
+        // Category container with data attribute
+        const categoryContainer = document.createElement('div');
+        categoryContainer.setAttribute(`data-liri-beer-${category}`, '');
+        
+        // Add to section
+        sectionWrapper.appendChild(titleWrapper);
+        sectionWrapper.appendChild(categoryContainer);
+        
+        // Add to main grid
+        mainGrid.appendChild(sectionWrapper);
+        
+        // Now populate this category container
+        populateBeerCategory(categoryContainer, beers, category);
+      });
+      
+      return; // We've handled everything in this case
+    }
+    
+    // Original flow - categories exist, populate them
+    categoryOrder.forEach(category => {
+      const beers = categorizedBeers[category];
+      if (beers.length === 0) return; // Skip empty categories
+      
+      // Find the container for this category
+      const categorySelector = `[data-liri-beer-${category}]`;
+      let categoryContainer = document.querySelector(categorySelector);
+      
+      // Try different selector variations if needed
+      if (!categoryContainer) {
+        console.warn(`Container for beer category ${category} not found with selector ${categorySelector}, trying alternative selector`);
+        
+        // Try alternatives - either the attribute might be empty or might have a value
+        const alternativeSelectors = [
+          `[data-liri-beer-${category}=""]`,  // Empty value
+          `div[data-liri-beer-${category}]`,  // Specifically a div
+          `*[data-liri-beer-${category}]`     // Any element with wildcard
+        ];
+        
+        for (const altSelector of alternativeSelectors) {
+          const altContainer = document.querySelector(altSelector);
+          if (altContainer) {
+            console.log(`Found container with alternative selector: ${altSelector}`);
+            categoryContainer = altContainer;
+            break;
+          }
+        }
+      }
+      
+      if (!categoryContainer) {
+        console.warn(`Container for beer category ${category} not found with any selector, skipping this category`);
+        return;
+      }
+      
+      // Populate this category
+      populateBeerCategory(categoryContainer, beers, category);
+    });
+    
+    // Helper function to populate a single beer category
+    function populateBeerCategory(categoryContainer, beers, category) {
+      // Create the grid wrapper for this category
+      const gridWrapper = document.createElement('div');
+      gridWrapper.className = 'w-layout-grid menu-section-wrapper';
+      
+      // Add each beer in this category
+      beers.forEach(beer => {
+        const itemWrapper = document.createElement('div');
+        itemWrapper.id = `w-node-${generateRandomId()}`;
+        itemWrapper.className = 'menu-item-wrapper';
+        
+        // Create title bar with dots and price
+        const titleGrid = document.createElement('div');
+        titleGrid.className = 'w-layout-grid menu-item-tittle';
+        
+        // Create title element with size info
+        const titleElement = document.createElement('div');
+        titleElement.id = `w-node-${generateRandomId()}`;
+        if (typeof beer.title === 'object' && beer.title.en) {
+          // Get the basic title
+          let titleText = beer.title.en;
+          
+          // Check if we should add size directly (if not already in the title)
+          if (beer.size && !titleText.includes(beer.size.toString())) {
+            // Create the size span
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'text-size-tiny text-weight-normal';
+            sizeSpan.textContent = ` ${beer.size}ml`;
+            
+            // Set the base title text
+            titleElement.textContent = titleText;
+            // Append the size span
+            titleElement.appendChild(sizeSpan);
+          } else {
+            // Size is already in the title or not applicable
+            titleElement.textContent = titleText;
+          }
+        } else if (typeof beer.title === 'string') {
+          titleElement.textContent = beer.title;
+        } else {
+          console.warn('Invalid beer title', beer);
+          return; // Skip this item
+        }
+        
+        // Create dots element
+        const dotsElement = document.createElement('div');
+        dotsElement.id = `w-node-${generateRandomId()}`;
+        dotsElement.className = 'menu-item-dots';
+        
+        // Create price element
+        const priceElement = document.createElement('div');
+        priceElement.id = `w-node-${generateRandomId()}`;
+        
+        // Format price
+        const priceText = typeof beer.price === 'number' ? 
+          beer.price.toFixed(2).replace('.', ',') : '';
+        
+        if (!priceText) {
+          console.warn('Missing price for beer item:', beer);
+          return; // Skip this item
+        }
+        
+        priceElement.textContent = priceText;
+        
+        // Add components to title grid
+        titleGrid.appendChild(titleElement);
+        titleGrid.appendChild(dotsElement);
+        titleGrid.appendChild(priceElement);
+        itemWrapper.appendChild(titleGrid);
+        
+        // Add description if available
+        if (beer.description && typeof beer.description === 'object' && beer.description.en) {
+          const descriptionElement = document.createElement('div');
+          descriptionElement.className = 'menu-item-description';
+          descriptionElement.textContent = beer.description.en;
+          itemWrapper.appendChild(descriptionElement);
+        }
+        
+        gridWrapper.appendChild(itemWrapper);
+      });
+      
+      // Add the grid to the category container
+      categoryContainer.innerHTML = '';
+      categoryContainer.appendChild(gridWrapper);
+    }
+  }
+  
   // Helper function to generate random IDs for w-node elements
   function generateRandomId() {
     return Array.from({ length: 24 }, () => 
@@ -880,6 +1123,12 @@
       selector: '[data-liri-wine]',
       documentType: 'wineItem',
       template: 'wine'
+    },
+    {
+      name: 'beer',
+      selector: '[data-liri-beer]',
+      documentType: 'beerItem',
+      template: 'beer'
     }
     // Add more menu sections as needed:
     // { name: 'spirits', selector: '[data-liri-spirits]', documentType: 'spiritItem', template: 'standard' }
@@ -899,21 +1148,26 @@
   
   // Function to fix potential issues with wine container attributes
   function fixWineContainerAttributes() {
-    console.log("Checking and fixing wine container attribute cases...");
+    console.log("Checking and fixing container attribute cases...");
     
-    // The correct format we expect for the wine data attributes
+    // The correct format we expect for the data attributes
     const correctAttributeNames = [
+      // Wine attributes
       'data-liri-red-wine',
       'data-liri-white-wine', 
       'data-liri-rose-wine',
       'data-liri-sparkling-wine',
-      'data-liri-wine'
+      'data-liri-wine',
+      // Beer attributes
+      'data-liri-beer',
+      'data-liri-beer-local',
+      'data-liri-beer-imported'
     ];
     
     // Check all elements on the page
     const allElements = document.querySelectorAll('*');
     
-    // Look for potential mismatched wine attributes
+    // Look for potential mismatched attributes
     allElements.forEach(el => {
       // Check if element has any attributes
       if (!el.attributes || el.attributes.length === 0) return;
@@ -923,8 +1177,9 @@
         // Skip if not a data attribute
         if (!attr.name.toLowerCase().startsWith('data-')) return;
         
-        // Check if it might be a wine attribute with incorrect casing
-        if (attr.name.toLowerCase().includes('wine')) {
+        // Check if it might be a menu attribute with incorrect casing
+        if (attr.name.toLowerCase().includes('wine') || 
+            attr.name.toLowerCase().includes('beer')) {
           // Check if it matches any of our expected attributes but with different case
           const matchedAttribute = correctAttributeNames.find(
             correctAttr => correctAttr.toLowerCase() === attr.name.toLowerCase()
