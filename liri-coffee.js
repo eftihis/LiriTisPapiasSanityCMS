@@ -567,12 +567,12 @@
     const categorizedWines = {};
     
     // Define expected categories in the order they should appear
-    const categoryOrder = ['red-wine', 'white-wine', 'rose-wine', 'sparkling-wine'];
+    const categoryOrder = ['sparkling-wine', 'white-wine', 'rose-wine', 'red-wine'];
     const categoryLabels = {
-      'red-wine': 'Red Wine',
+      'sparkling-wine': 'Sparkling Wine',
       'white-wine': 'White Wine',
       'rose-wine': 'Rosé Wine',
-      'sparkling-wine': 'Sparkling Wine'
+      'red-wine': 'Red Wine'
     };
     
     // Also check for possible case variants of these categories in the HTML
