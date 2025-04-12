@@ -4,6 +4,44 @@
   const dataset = 'production';
   const apiVersion = '2024-03-19';
   
+  // Create a function for the enhanced loading indicator
+  function createLoadingIndicator(name) {
+    // Create main container
+    const loadingContainer = document.createElement('div');
+    loadingContainer.className = 'loading-indicator flex flex-col items-center justify-center p-6 w-full';
+    
+    // Create spinner
+    const spinner = document.createElement('div');
+    spinner.className = 'h-10 w-10 rounded-full border-4 border-solid border-gray-300 border-t-primary animate-spin mb-4';
+    
+    // Create text
+    const loadingText = document.createElement('div');
+    loadingText.className = 'text-gray-700 font-medium text-center';
+    loadingText.textContent = `Loading ${name} menu...`;
+    
+    // Assemble the loading indicator
+    loadingContainer.appendChild(spinner);
+    loadingContainer.appendChild(loadingText);
+    
+    return loadingContainer;
+  }
+
+  // Create a function for error messages
+  function createErrorMessage(message) {
+    const errorContainer = document.createElement('div');
+    errorContainer.className = 'error-message p-4 rounded-md bg-destructive/10 border border-destructive text-destructive text-center';
+    errorContainer.textContent = message;
+    return errorContainer;
+  }
+
+  // Create a function for empty menu messages
+  function createEmptyMessage(name) {
+    const emptyContainer = document.createElement('div');
+    emptyContainer.className = 'empty-menu p-4 rounded-md bg-muted text-muted-foreground text-center';
+    emptyContainer.textContent = `No ${name} items available at the moment`;
+    return emptyContainer;
+  }
+  
   // Common function to load menu items
   function loadMenuItems(config) {
     const container = document.querySelector(config.selector);
@@ -13,11 +51,8 @@
     }
     
     // Show loading indicator
-    const loadingIndicator = document.createElement('div');
-    loadingIndicator.className = 'loading-indicator';
-    loadingIndicator.textContent = `Loading ${config.name} menu...`;
     container.innerHTML = '';
-    container.appendChild(loadingIndicator);
+    container.appendChild(createLoadingIndicator(config.name));
     
     // Create query based on the document type and template type
     let query;
@@ -101,7 +136,7 @@
         const menuItems = data.result || [];
         
         if (!menuItems || menuItems.length === 0) {
-          container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+          container.innerHTML = createEmptyMessage(config.name);
           return;
         }
         
@@ -124,12 +159,16 @@
       })
       .catch(error => {
         console.error(`Error loading ${config.name} data from Sanity:`, error);
-        container.innerHTML = `<div class="error-message">Failed to load ${config.name} menu from Sanity</div>`;
+        container.innerHTML = createErrorMessage(`Failed to load ${config.name} menu from Sanity`);
       });
   }
   
   // Function to render standard menu items (coffee, tea, etc.)
   function renderStandardMenuItems(container, menuItems, config) {
+    // Show loading indicator while preparing the grid
+    container.innerHTML = '';
+    container.appendChild(createLoadingIndicator(config.name));
+    
     // Create the grid wrapper to match your structure
     const gridWrapper = document.createElement('div');
     gridWrapper.className = 'w-layout-grid menu-section-wrapper';
@@ -178,10 +217,12 @@
     });
     
     if (gridWrapper.children.length === 0) {
-      container.innerHTML = `<div class="error-message">Failed to load ${config.name} menu. No valid items found.</div>`;
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage(config.name));
       return;
     }
     
+    // Replace loading indicator with the actual content
     container.innerHTML = '';
     container.appendChild(gridWrapper);
   }
@@ -189,6 +230,10 @@
   // Function to render regular cocktails by categories
   function renderRegularCocktailItems(container, cocktailItems, config) {
     console.log("Starting to render regular cocktail items", cocktailItems);
+    
+    // Show loading indicator in the main container
+    container.innerHTML = '';
+    container.appendChild(createLoadingIndicator(config.name));
     
     // More verbose debugging
     console.log("All data attributes on the page:");
@@ -198,11 +243,11 @@
       const allElements = document.querySelectorAll('*');
       for (const el of allElements) {
         const liriAttrs = Array.from(el.attributes)
-          .filter(attr => attr.name.startsWith('data-liri-'))
+          .filter(attr => attr.name && attr.name.startsWith('data-liri-'))
           .map(attr => attr.name);
         
         if (liriAttrs.length > 0) {
-          console.log(`Element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
+          console.log(`Found element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
         }
       }
     } catch (error) {
@@ -243,9 +288,6 @@
       }
     });
     
-    // Clear the container - but also render something in it to show it's working
-    container.innerHTML = '';
-    
     // Check if we have any cocktails
     let totalCocktails = 0;
     for (const category in categorizedCocktails) {
@@ -255,11 +297,15 @@
     }
     
     if (totalCocktails === 0) {
-      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage(config.name));
       return;
     }
     
-    // Create containers for each category section in the defined order
+    // Clear the main container since we'll be populating individual category containers
+    container.innerHTML = '';
+    
+    // Create containers for each category in the defined order
     categoryOrder.forEach(category => {
       const cocktails = categorizedCocktails[category];
       if (cocktails.length === 0) return; // Skip empty categories
@@ -279,6 +325,10 @@
         console.warn(`Container for category ${category} not found with selector ${categorySelector}`);
         return;
       }
+      
+      // Show loading indicator in the category container
+      categoryContainer.innerHTML = '';
+      categoryContainer.appendChild(createLoadingIndicator(categoryLabels[category]));
       
       // Create the grid wrapper for this category
       const gridWrapper = document.createElement('div');
@@ -352,6 +402,7 @@
       bottomSpacer.className = 'spacer-small';
       gridWrapper.appendChild(bottomSpacer);
       
+      // Replace loading indicator with the actual content
       // Add the grid to the category container
       categoryContainer.innerHTML = '';
       categoryContainer.appendChild(gridWrapper);
@@ -360,6 +411,10 @@
   
   // Function to render cocktail items with complex structure
   function renderCocktailItems(container, cocktailItems, config) {
+    // Show loading indicator in the container
+    container.innerHTML = '';
+    container.appendChild(createLoadingIndicator(config.name));
+    
     // Create the main grid wrapper
     const gridWrapper = document.createElement('div');
     gridWrapper.className = 'w-layout-grid menu-section-wrapper';
@@ -534,10 +589,12 @@
     gridWrapper.appendChild(dynList);
     
     if (collectionList.children.length === 0) {
-      container.innerHTML = `<div class="error-message">Failed to load ${config.name} menu. No valid items found.</div>`;
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage(config.name));
       return;
     }
     
+    // Replace loading indicator with the actual content
     container.innerHTML = '';
     container.appendChild(gridWrapper);
   }
@@ -545,6 +602,10 @@
   // Function to render wine items
   function renderWineItems(container, wineItems, config) {
     console.log("Starting to render wine items", wineItems);
+    
+    // Show loading indicator in the main container
+    container.innerHTML = '';
+    container.appendChild(createLoadingIndicator(config.name));
     
     // Add debugging to check for wine containers
     console.log("Looking for wine containers on the page:");
@@ -646,7 +707,8 @@
     }
     
     if (totalWines === 0) {
-      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage(config.name));
       return;
     }
     
@@ -697,6 +759,9 @@
         const categoryContainer = document.createElement('div');
         categoryContainer.setAttribute(`data-liri-${category}`, '');
         
+        // Show loading indicator in the category container
+        categoryContainer.appendChild(createLoadingIndicator(categoryLabels[category]));
+        
         // Add to section
         sectionWrapper.appendChild(titleWrapper);
         sectionWrapper.appendChild(categoryContainer);
@@ -710,6 +775,9 @@
       
       return; // We've handled everything in this case
     }
+    
+    // Clear the main container since we'll populate individual category containers
+    container.innerHTML = '';
     
     // Original flow - categories exist, populate them
     categoryOrder.forEach(category => {
@@ -745,6 +813,10 @@
         console.warn(`Container for wine category ${category} not found with any selector, skipping this category`);
         return;
       }
+      
+      // Show loading indicator in the category container
+      categoryContainer.innerHTML = '';
+      categoryContainer.appendChild(createLoadingIndicator(categoryLabels[category]));
       
       // Populate this category
       populateWineCategory(categoryContainer, wines, category);
@@ -846,7 +918,7 @@
         gridWrapper.appendChild(itemWrapper);
       });
       
-      // Add the grid to the category container
+      // Replace loading indicator with the actual content
       categoryContainer.innerHTML = '';
       categoryContainer.appendChild(gridWrapper);
     }
@@ -855,6 +927,48 @@
   // Function to render beer items by type
   function renderBeerItems(container, beerItems, config) {
     console.log("Starting to render beer items", beerItems);
+    
+    // Show loading indicator in the main container
+    container.innerHTML = '';
+    container.appendChild(createLoadingIndicator(config.name));
+    
+    // Add debugging to check for beer containers
+    console.log("Looking for beer containers on the page:");
+    const allElements = document.querySelectorAll('*');
+    let foundBeerContainers = false;
+    for (const el of allElements) {
+      const liriAttrs = Array.from(el.attributes || [])
+        .filter(attr => attr.name && attr.name.toLowerCase().startsWith('data-liri-') && 
+                (attr.name.toLowerCase().includes('beer') || attr.name.toLowerCase().includes('beer-local') || 
+                 attr.name.toLowerCase().includes('beer-imported')))
+        .map(attr => attr.name);
+      
+      if (liriAttrs.length > 0) {
+        console.log(`Found element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
+        console.log("Element HTML:", el.outerHTML.substring(0, 100) + "...");
+        foundBeerContainers = true;
+      }
+    }
+    
+    if (!foundBeerContainers) {
+      console.error("NO BEER CONTAINERS FOUND - check HTML for correct data-liri-* attributes");
+      
+      // Let's specifically check if the structures in your HTML exist
+      console.log("Checking for specific beer section structure:");
+      const beerSection = document.querySelector('section#beer.beer_section');
+      if (beerSection) {
+        console.log("Found beer section with ID 'beer'");
+        
+        // Check for the div structure inside
+        const localBeerDiv = beerSection.querySelector('[data-liri-beer-local]');
+        console.log("Local beer div exists:", !!localBeerDiv);
+        
+        const importedBeerDiv = beerSection.querySelector('[data-liri-beer-imported]');
+        console.log("Imported beer div exists:", !!importedBeerDiv);
+      } else {
+        console.error("Beer section with ID 'beer' not found");
+      }
+    }
     
     // Group beers by their beerType
     const categorizedBeers = {};
@@ -891,7 +1005,8 @@
     }
     
     if (totalBeers === 0) {
-      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage(config.name));
       return;
     }
     
@@ -941,6 +1056,9 @@
         // Category container with data attribute
         const categoryContainer = document.createElement('div');
         categoryContainer.setAttribute(`data-liri-beer-${category}`, '');
+        
+        // Show loading indicator in the category container
+        categoryContainer.appendChild(createLoadingIndicator(categoryLabels[category]));
         
         // Add to section
         sectionWrapper.appendChild(titleWrapper);
@@ -1077,7 +1195,7 @@
         gridWrapper.appendChild(itemWrapper);
       });
       
-      // Add the grid to the category container
+      // Replace loading indicator with the actual content
       categoryContainer.innerHTML = '';
       categoryContainer.appendChild(gridWrapper);
     }
@@ -1142,7 +1260,7 @@
     }
     
     if (totalSpirits === 0) {
-      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      container.innerHTML = createEmptyMessage(config.name);
       return;
     }
     
@@ -1410,6 +1528,17 @@
   function loadSpiritMenuItems() {
     console.log("Loading spirit menu items directly...");
     
+    // Use main container as fallback
+    const container = document.querySelector('[data-liri-spirits]');
+    if (!container) {
+      console.error("Main spirits container not found. Ensure there's an element with [data-liri-spirits] attribute.");
+      return;
+    }
+    
+    // Show loading indicator
+    container.innerHTML = '';
+    container.appendChild(createLoadingIndicator('spirits'));
+    
     // Configuration for Sanity API
     const projectId = 'ivfy9y3f';
     const dataset = 'production';
@@ -1445,7 +1574,8 @@
         const spiritItems = data.result || [];
         
         if (!spiritItems || spiritItems.length === 0) {
-          console.log("No spirit items found");
+          container.innerHTML = '';
+          container.appendChild(createEmptyMessage('spirits'));
           return;
         }
         
@@ -1492,20 +1622,26 @@
           }
           
           // Try to find the container directly
-          const container = document.querySelector(`[data-liri-spirit-${category}]`);
-          if (!container) {
+          const categoryContainer = document.querySelector(`[data-liri-spirit-${category}]`);
+          if (!categoryContainer) {
             console.log(`Container not found for ${category}`);
             return;
           }
           
           console.log(`Found container for ${category}, populating with ${spirits.length} items`);
           
+          // Show loading indicator in category container
+          categoryContainer.innerHTML = '';
+          categoryContainer.appendChild(createLoadingIndicator(category));
+          
           // Create content
-          renderSpiritCategory(container, spirits);
+          renderSpiritCategory(categoryContainer, spirits);
         });
       })
       .catch(error => {
         console.error("Error loading spirit data:", error);
+        container.innerHTML = '';
+        container.appendChild(createErrorMessage("Failed to load spirits menu"));
       });
   }
 
