@@ -41,6 +41,17 @@
         description,
         category
       }`);
+    } else if (config.template === 'wine') {
+      // Special query for wines including subcategory, glass/bottle prices, and grape varieties
+      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
+        _id, 
+        title,
+        description,
+        grapeVarieties,
+        subCategory,
+        glassPrice,
+        bottlePrice
+      }`);
     } else {
       // Standard query for simple menu items
       query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
@@ -75,6 +86,8 @@
           renderCocktailItems(container, menuItems, config);
         } else if (config.template === 'regularCocktail') {
           renderRegularCocktailItems(container, menuItems, config);
+        } else if (config.template === 'wine') {
+          renderWineItems(container, menuItems, config);
         } else {
           renderStandardMenuItems(container, menuItems, config);
         }
@@ -501,6 +514,168 @@
     container.appendChild(gridWrapper);
   }
   
+  // Function to render wine items
+  function renderWineItems(container, wineItems, config) {
+    console.log("Starting to render wine items", wineItems);
+    
+    // Group wines by their subcategory
+    const categorizedWines = {};
+    
+    // Define expected categories in the order they should appear
+    const categoryOrder = ['red-wine', 'white-wine', 'rose-wine', 'sparkling-wine'];
+    const categoryLabels = {
+      'red-wine': 'Red Wine',
+      'white-wine': 'White Wine',
+      'rose-wine': 'Rosé Wine',
+      'sparkling-wine': 'Sparkling Wine'
+    };
+    
+    // Initialize categories
+    categoryOrder.forEach(category => {
+      categorizedWines[category] = [];
+    });
+    
+    // Group wines by their subcategory
+    wineItems.forEach(wine => {
+      const category = wine.subCategory;
+      if (category && categorizedWines.hasOwnProperty(category)) {
+        categorizedWines[category].push(wine);
+        console.log(`Added wine to category ${category}:`, wine.title);
+      } else {
+        console.warn(`Wine has unknown category: ${category}`, wine);
+      }
+    });
+    
+    // Clear the container
+    container.innerHTML = '';
+    
+    // Check if we have any wines
+    let totalWines = 0;
+    for (const category in categorizedWines) {
+      const count = categorizedWines[category].length;
+      totalWines += count;
+      console.log(`Category ${category} has ${count} wines`);
+    }
+    
+    if (totalWines === 0) {
+      container.innerHTML = `<div class="empty-menu">No ${config.name} items found in Sanity</div>`;
+      return;
+    }
+    
+    // Create containers for each category section in the defined order
+    categoryOrder.forEach(category => {
+      const wines = categorizedWines[category];
+      if (wines.length === 0) return; // Skip empty categories
+      
+      // Find the container for this category
+      const categorySelector = `[data-liri-${category}]`;
+      const categoryContainer = document.querySelector(categorySelector);
+      
+      if (!categoryContainer) {
+        console.warn(`Container for wine category ${category} not found with selector ${categorySelector}`);
+        return;
+      }
+      
+      // Create the grid wrapper for this category
+      const gridWrapper = document.createElement('div');
+      gridWrapper.className = 'w-layout-grid menu-section-wrapper';
+      
+      // Add each wine in this category
+      wines.forEach(wine => {
+        const itemWrapper = document.createElement('div');
+        itemWrapper.id = `w-node-${generateRandomId()}`;
+        itemWrapper.className = 'menu-item-wrapper';
+        
+        // Create title bar with dots and price
+        const titleGrid = document.createElement('div');
+        titleGrid.className = 'w-layout-grid menu-item-tittle';
+        
+        // Create title element
+        const titleElement = document.createElement('div');
+        titleElement.id = `w-node-${generateRandomId()}`;
+        if (typeof wine.title === 'object' && wine.title.en) {
+          titleElement.textContent = wine.title.en;
+        } else if (typeof wine.title === 'string') {
+          titleElement.textContent = wine.title;
+        } else {
+          console.warn('Invalid wine title', wine);
+          return; // Skip this item
+        }
+        
+        // Create dots element
+        const dotsElement = document.createElement('div');
+        dotsElement.id = `w-node-${generateRandomId()}`;
+        dotsElement.className = 'menu-item-dots';
+        
+        // Create price element with glass and optional bottle price
+        const priceElement = document.createElement('div');
+        priceElement.id = `w-node-${generateRandomId()}`;
+        
+        // Format glass price
+        const glassPrice = typeof wine.glassPrice === 'number' ? 
+          wine.glassPrice.toFixed(2).replace('.', ',') : '';
+        
+        // Format bottle price if it exists
+        const bottlePrice = typeof wine.bottlePrice === 'number' ? 
+          wine.bottlePrice.toFixed(2).replace('.', ',') : '';
+        
+        // Combine prices for display
+        if (glassPrice && bottlePrice) {
+          priceElement.textContent = `${glassPrice} / ${bottlePrice}`;
+        } else if (glassPrice) {
+          priceElement.textContent = glassPrice;
+        } else {
+          console.warn('Missing price for wine item:', wine);
+          return; // Skip this item
+        }
+        
+        // Add components to title grid
+        titleGrid.appendChild(titleElement);
+        titleGrid.appendChild(dotsElement);
+        titleGrid.appendChild(priceElement);
+        itemWrapper.appendChild(titleGrid);
+        
+        // Add description and grape varieties if available
+        if (wine.description || wine.grapeVarieties) {
+          const descriptionElement = document.createElement('div');
+          descriptionElement.className = 'menu-item-description';
+          
+          // Add description text
+          let descriptionText = '';
+          if (wine.description && typeof wine.description === 'object' && wine.description.en) {
+            descriptionText = wine.description.en;
+          }
+          
+          // Add grape varieties in parentheses with special span
+          let grapeVarietiesText = '';
+          if (wine.grapeVarieties && typeof wine.grapeVarieties === 'object' && wine.grapeVarieties.en) {
+            const grapeVarietiesSpan = document.createElement('span');
+            grapeVarietiesSpan.className = 'grape_variety';
+            grapeVarietiesSpan.textContent = `(${wine.grapeVarieties.en})`;
+            
+            if (descriptionText) {
+              descriptionText += ' ';
+              descriptionElement.textContent = descriptionText;
+              descriptionElement.appendChild(grapeVarietiesSpan);
+            } else {
+              descriptionElement.appendChild(grapeVarietiesSpan);
+            }
+          } else {
+            descriptionElement.textContent = descriptionText;
+          }
+          
+          itemWrapper.appendChild(descriptionElement);
+        }
+        
+        gridWrapper.appendChild(itemWrapper);
+      });
+      
+      // Add the grid to the category container
+      categoryContainer.innerHTML = '';
+      categoryContainer.appendChild(gridWrapper);
+    });
+  }
+  
   // Helper function to generate random IDs for w-node elements
   function generateRandomId() {
     return Array.from({ length: 24 }, () => 
@@ -551,9 +726,14 @@
       selector: '[data-liri-regular-cocktails]',
       documentType: 'regularCocktailItem',
       template: 'regularCocktail'
+    },
+    {
+      name: 'wine',
+      selector: '[data-liri-wine]',
+      documentType: 'wineItem',
+      template: 'wine'
     }
     // Add more menu sections as needed:
-    // { name: 'wine', selector: '[data-liri-wine]', documentType: 'wineItem', template: 'standard' }
     // { name: 'spirits', selector: '[data-liri-spirits]', documentType: 'spiritItem', template: 'standard' }
   ];
   
