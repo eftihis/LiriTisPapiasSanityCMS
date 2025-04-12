@@ -283,7 +283,7 @@
       // Create the grid wrapper for this category
       const gridWrapper = document.createElement('div');
       gridWrapper.className = 'w-layout-grid accordion-content';
-      gridWrapper.style.width = '522.5px';
+      gridWrapper.style.width = '100%';
       
       // Add top spacer
       const topSpacer = document.createElement('div');
@@ -1163,7 +1163,7 @@
       // Create the grid wrapper for this category
       const gridWrapper = document.createElement('div');
       gridWrapper.className = 'w-layout-grid accordion-content';
-      gridWrapper.style.width = '522.5px';
+      gridWrapper.style.width = '100%';
       
       // Add top spacer
       const topSpacer = document.createElement('div');
@@ -1406,11 +1406,230 @@
     });
   }
   
+  // Add a new standalone function for loading and rendering spirits
+  function loadSpiritMenuItems() {
+    console.log("Loading spirit menu items directly...");
+    
+    // Configuration for Sanity API
+    const projectId = 'ivfy9y3f';
+    const dataset = 'production';
+    const apiVersion = '2024-03-19';
+    
+    // Create query for spirits
+    const query = encodeURIComponent(`*[_type == "spiritItem"] | order(orderRank asc) {
+      _id, 
+      title,
+      description,
+      subCategory,
+      variants[] {
+        _key,
+        size,
+        price
+      },
+      orderRank
+    }`);
+    
+    // Use the CORS-enabled API endpoint
+    const url = `https://${projectId}.api.sanity.io/v${apiVersion}/data/query/${dataset}?query=${query}`;
+    
+    // Fetch data using standard fetch API
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Error fetching data: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log(`Spirit data received:`, data);
+        const spiritItems = data.result || [];
+        
+        if (!spiritItems || spiritItems.length === 0) {
+          console.log("No spirit items found");
+          return;
+        }
+        
+        // Group spirits by category
+        const spiritsByCategory = {};
+        
+        // Process each spirit item
+        spiritItems.forEach(spirit => {
+          const category = spirit.subCategory;
+          if (!category) return;
+          
+          // Create category array if it doesn't exist
+          if (!spiritsByCategory[category]) {
+            spiritsByCategory[category] = [];
+          }
+          
+          // Add spirit to its category
+          spiritsByCategory[category].push(spirit);
+        });
+        
+        // Sort each category alphabetically
+        Object.keys(spiritsByCategory).forEach(category => {
+          spiritsByCategory[category].sort((a, b) => {
+            const titleA = (typeof a.title === 'object') ? a.title.en : a.title;
+            const titleB = (typeof b.title === 'object') ? b.title.en : b.title;
+            return titleA.localeCompare(titleB);
+          });
+        });
+        
+        // Log what we found
+        Object.keys(spiritsByCategory).forEach(category => {
+          console.log(`Found ${spiritsByCategory[category].length} items for ${category}`);
+        });
+        
+        // Process each category directly
+        const categories = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
+                            'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
+        
+        categories.forEach(category => {
+          const spirits = spiritsByCategory[category] || [];
+          if (spirits.length === 0) {
+            console.log(`No spirits found for category: ${category}`);
+            return;
+          }
+          
+          // Try to find the container directly
+          const container = document.querySelector(`[data-liri-spirit-${category}]`);
+          if (!container) {
+            console.log(`Container not found for ${category}`);
+            return;
+          }
+          
+          console.log(`Found container for ${category}, populating with ${spirits.length} items`);
+          
+          // Create content
+          renderSpiritCategory(container, spirits);
+        });
+      })
+      .catch(error => {
+        console.error("Error loading spirit data:", error);
+      });
+  }
+
+  // Function to render a single spirit category
+  function renderSpiritCategory(container, spirits) {
+    // Create the content wrapper
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'w-layout-grid accordion-content';
+    contentWrapper.style.width = '100%';
+    
+    // Add top spacer
+    const topSpacer = document.createElement('div');
+    topSpacer.className = 'spacer-small';
+    contentWrapper.appendChild(topSpacer);
+    
+    // Add each spirit item
+    spirits.forEach(spirit => {
+      const itemWrapper = document.createElement('div');
+      itemWrapper.id = `w-node-${generateRandomId()}`;
+      itemWrapper.className = 'menu-item-wrapper';
+      
+      // Create title bar with dots and price
+      const titleGrid = document.createElement('div');
+      titleGrid.className = 'w-layout-grid menu-item-tittle';
+      
+      // Title element
+      const titleElement = document.createElement('div');
+      titleElement.id = `w-node-${generateRandomId()}`;
+      if (typeof spirit.title === 'object' && spirit.title.en) {
+        titleElement.textContent = spirit.title.en;
+      } else if (typeof spirit.title === 'string') {
+        titleElement.textContent = spirit.title;
+      } else {
+        return; // Skip invalid items
+      }
+      
+      // Dots element
+      const dotsElement = document.createElement('div');
+      dotsElement.id = `w-node-${generateRandomId()}`;
+      dotsElement.className = 'menu-item-dots';
+      
+      // Price element
+      const priceElement = document.createElement('div');
+      priceElement.id = `w-node-${generateRandomId()}`;
+      
+      // Format price
+      let priceText = '';
+      if (spirit.variants && spirit.variants.length > 0) {
+        // Sort variants by price (lowest first)
+        const sortedVariants = [...spirit.variants].sort((a, b) => a.price - b.price);
+        
+        // Check if any price is zero (unavailable)
+        const hasUnavailable = sortedVariants.some(variant => variant.price === 0);
+        
+        if (hasUnavailable) {
+          priceText = 'unavailable';
+        } else if (sortedVariants.length === 1) {
+          // Single price format
+          priceText = sortedVariants[0].price.toFixed(2).replace('.', ',');
+        } else {
+          // Multiple price format
+          priceText = sortedVariants
+            .map(variant => variant.price.toFixed(2).replace('.', ','))
+            .join(' / ');
+        }
+      } else {
+        priceText = 'Price not available';
+      }
+      
+      priceElement.textContent = priceText;
+      
+      // Add components to title grid
+      titleGrid.appendChild(titleElement);
+      titleGrid.appendChild(dotsElement);
+      titleGrid.appendChild(priceElement);
+      itemWrapper.appendChild(titleGrid);
+      
+      // Add description if available
+      if (spirit.description && 
+         ((typeof spirit.description === 'object' && spirit.description.en) || 
+          (typeof spirit.description === 'string' && spirit.description))) {
+        const descriptionElement = document.createElement('div');
+        descriptionElement.className = 'menu-item-description';
+        
+        if (typeof spirit.description === 'object' && spirit.description.en) {
+          descriptionElement.textContent = spirit.description.en;
+        } else if (typeof spirit.description === 'string') {
+          descriptionElement.textContent = spirit.description;
+        }
+        
+        itemWrapper.appendChild(descriptionElement);
+      }
+      
+      contentWrapper.appendChild(itemWrapper);
+    });
+    
+    // Add bottom spacer
+    const bottomSpacer = document.createElement('div');
+    bottomSpacer.className = 'spacer-small';
+    contentWrapper.appendChild(bottomSpacer);
+    
+    // Clear and add to container
+    container.innerHTML = '';
+    container.appendChild(contentWrapper);
+    
+    // Make sure it's visible
+    container.style.height = 'auto';
+  }
+
+  // Update the initialization code with our standalone spirit loading
+  function initializeWithSpirits() {
+    // Initialize standard menus
+    initializeMenus();
+    
+    // Add a delay before loading spirits to ensure DOM is ready
+    setTimeout(loadSpiritMenuItems, 1000);
+  }
+
   // Initialize when the DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeMenus);
+    document.addEventListener('DOMContentLoaded', initializeWithSpirits);
   } else {
-    initializeMenus();
+    // DOM already loaded
+    initializeWithSpirits();
   }
 
   // Rename the file to liri-menu.js since it now handles multiple menu types
