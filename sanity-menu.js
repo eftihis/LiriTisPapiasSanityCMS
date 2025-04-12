@@ -22,7 +22,6 @@
         data: data
       };
       localStorage.setItem(getCacheKey(documentType), JSON.stringify(cacheItem));
-      console.log(`Cached data for ${documentType}`);
     } catch (error) {
       console.warn('Failed to save to cache:', error);
     }
@@ -39,12 +38,10 @@
       
       // Check if cache is expired
       if (now - parsedItem.timestamp > CACHE_EXPIRATION) {
-        console.log(`Cache expired for ${documentType}, fetching fresh data`);
         localStorage.removeItem(getCacheKey(documentType));
         return null;
       }
       
-      console.log(`Using cached data for ${documentType} (${Math.round((now - parsedItem.timestamp) / 1000)}s old)`);
       return parsedItem.data;
     } catch (error) {
       console.warn('Failed to retrieve from cache:', error);
@@ -245,26 +242,23 @@
       const itemWrapper = document.createElement('div');
       itemWrapper.className = 'menu-item-wrapper';
       
-      // Get price directly from the price field
       const priceText = typeof item.price === 'number' ? 
         item.price.toFixed(2).replace('.', ',') : '';
       
-      // If price is missing, skip this item
       if (!priceText) {
         console.error(`Missing price for ${config.name} item:`, item);
-        return; // Skip this item
+        return;
       }
       
       const innerGrid = document.createElement('div');
       innerGrid.className = 'w-layout-grid menu-item-tittle';
       
       const titleElement = document.createElement('div');
-      // Get title from the object structure
       if (typeof item.title === 'object' && item.title.en) {
         titleElement.textContent = item.title.en;
       } else {
         console.error(`Missing or invalid title for ${config.name} item:`, item);
-        return; // Skip this item
+        return;
       }
       
       const dotsElement = document.createElement('div');
@@ -294,41 +288,11 @@
 
   // Function to render regular cocktails by categories
   function renderRegularCocktailItems(container, cocktailItems, config) {
-    console.log("Starting to render regular cocktail items", cocktailItems);
-    
-    // Show loading indicator in the main container
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    // More verbose debugging
-    console.log("All data attributes on the page:");
-    try {
-      // This syntax for selecting attributes with wildcard isn't widely supported,
-      // so let's use a different approach
-      const allElements = document.querySelectorAll('*');
-      for (const el of allElements) {
-        const liriAttrs = Array.from(el.attributes)
-          .filter(attr => attr.name && attr.name.startsWith('data-liri-'))
-          .map(attr => attr.name);
-        
-        if (liriAttrs.length > 0) {
-          console.log(`Found element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
-        }
-      }
-    } catch (error) {
-      console.error("Error selecting elements:", error);
-    }
-    
-    // Log all matching data-* elements for debugging
-    console.log("Available data containers for cocktails specifically:");
-    document.querySelectorAll('[data-liri-classics], [data-liri-g-and-t], [data-liri-spritz], [data-liri-tropical-touch], [data-liri-regular-cocktails]').forEach(el => {
-      console.log(`Found element with attribute: ${Array.from(el.attributes).filter(attr => attr.name.startsWith('data-liri')).map(attr => attr.name).join(', ')}`);
-    });
-    
-    // Group cocktails by category
     const categorizedCocktails = {};
     
-    // Define expected categories in the order they should appear
     const categoryOrder = ['classics', 'g_and_t', 'spritz', 'tropical_touch'];
     const categoryLabels = {
       'classics': 'Classics',
@@ -337,17 +301,14 @@
       'tropical_touch': 'Tropical Touch'
     };
     
-    // Initialize categories
     categoryOrder.forEach(category => {
       categorizedCocktails[category] = [];
     });
     
-    // Group cocktails by their category
     cocktailItems.forEach(cocktail => {
       const category = cocktail.category;
       if (category && categorizedCocktails.hasOwnProperty(category)) {
         categorizedCocktails[category].push(cocktail);
-        console.log(`Added cocktail to category ${category}:`, cocktail.title);
       } else {
         console.warn(`Cocktail has unknown category: ${category}`, cocktail);
       }
@@ -435,9 +396,8 @@
         // Create price element
         const priceElement = document.createElement('div');
         priceElement.id = `w-node-${generateRandomId()}`;
-        const priceText = typeof cocktail.price === 'number' ? 
+        priceElement.textContent = typeof cocktail.price === 'number' ? 
           cocktail.price.toFixed(2).replace('.', ',') : '';
-        priceElement.textContent = priceText;
         
         // Add components to title grid
         titleGrid.appendChild(titleElement);
@@ -666,16 +626,11 @@
   
   // Function to render wine items
   function renderWineItems(container, wineItems, config) {
-    console.log("Starting to render wine items", wineItems);
-    
-    // Show loading indicator in the main container
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    // Add debugging to check for wine containers
-    console.log("Looking for wine containers on the page:");
-    const allElements = document.querySelectorAll('*');
     let foundWineContainers = false;
+    const allElements = document.querySelectorAll('*');
     for (const el of allElements) {
       const liriAttrs = Array.from(el.attributes || [])
         .filter(attr => attr.name && attr.name.toLowerCase().startsWith('data-liri-') && 
@@ -685,36 +640,12 @@
         .map(attr => attr.name);
       
       if (liriAttrs.length > 0) {
-        console.log(`Found element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
-        console.log("Element HTML:", el.outerHTML.substring(0, 100) + "...");
         foundWineContainers = true;
       }
     }
     
     if (!foundWineContainers) {
       console.error("NO WINE CONTAINERS FOUND - check HTML for correct data-liri-* attributes");
-      
-      // Let's specifically check if the structures in your HTML exist
-      console.log("Checking for specific wine section structure:");
-      const wineSection = document.querySelector('section#wine.wine_section');
-      if (wineSection) {
-        console.log("Found wine section with ID 'wine'");
-        
-        // Check for the div structure inside
-        const redWineDiv = wineSection.querySelector('[data-liri-red-wine]');
-        console.log("Red wine div exists:", !!redWineDiv);
-        
-        const whiteWineDiv = wineSection.querySelector('[data-liri-white-wine]');
-        console.log("White wine div exists:", !!whiteWineDiv);
-        
-        const roseWineDiv = wineSection.querySelector('[data-liri-rose-wine]');
-        console.log("Rose wine div exists:", !!roseWineDiv);
-        
-        const sparklingWineDiv = wineSection.querySelector('[data-liri-sparkling-wine]');
-        console.log("Sparkling wine div exists:", !!sparklingWineDiv);
-      } else {
-        console.error("Wine section with ID 'wine' not found");
-      }
     }
     
     // Group wines by their subcategory
@@ -879,10 +810,6 @@
         return;
       }
       
-      // Show loading indicator in the category container
-      categoryContainer.innerHTML = '';
-      categoryContainer.appendChild(createLoadingIndicator(categoryLabels[category]));
-      
       // Populate this category
       populateWineCategory(categoryContainer, wines, category);
     });
@@ -991,16 +918,11 @@
   
   // Function to render beer items by type
   function renderBeerItems(container, beerItems, config) {
-    console.log("Starting to render beer items", beerItems);
-    
-    // Show loading indicator in the main container
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    // Add debugging to check for beer containers
-    console.log("Looking for beer containers on the page:");
-    const allElements = document.querySelectorAll('*');
     let foundBeerContainers = false;
+    const allElements = document.querySelectorAll('*');
     for (const el of allElements) {
       const liriAttrs = Array.from(el.attributes || [])
         .filter(attr => attr.name && attr.name.toLowerCase().startsWith('data-liri-') && 
@@ -1009,30 +931,12 @@
         .map(attr => attr.name);
       
       if (liriAttrs.length > 0) {
-        console.log(`Found element: ${el.tagName}, Attributes: ${liriAttrs.join(', ')}`);
-        console.log("Element HTML:", el.outerHTML.substring(0, 100) + "...");
         foundBeerContainers = true;
       }
     }
     
     if (!foundBeerContainers) {
       console.error("NO BEER CONTAINERS FOUND - check HTML for correct data-liri-* attributes");
-      
-      // Let's specifically check if the structures in your HTML exist
-      console.log("Checking for specific beer section structure:");
-      const beerSection = document.querySelector('section#beer.beer_section');
-      if (beerSection) {
-        console.log("Found beer section with ID 'beer'");
-        
-        // Check for the div structure inside
-        const localBeerDiv = beerSection.querySelector('[data-liri-beer-local]');
-        console.log("Local beer div exists:", !!localBeerDiv);
-        
-        const importedBeerDiv = beerSection.querySelector('[data-liri-beer-imported]');
-        console.log("Imported beer div exists:", !!importedBeerDiv);
-      } else {
-        console.error("Beer section with ID 'beer' not found");
-      }
     }
     
     // Group beers by their beerType
@@ -1268,12 +1172,8 @@
   
   // Function to render spirit items by subcategories
   function renderSpiritItems(container, spiritItems, config) {
-    console.log("Starting to render spirit items", spiritItems);
-    
-    // Group spirits by their subCategory
     const categorizedSpirits = {};
     
-    // Define expected categories in the order they should appear
     const categoryOrder = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
     const categoryLabels = {
       'vodka': 'Vodka',
@@ -1291,23 +1191,19 @@
       'greek-spirits': 'Greek Spirits'
     };
     
-    // Initialize categories
     categoryOrder.forEach(category => {
       categorizedSpirits[category] = [];
     });
     
-    // Group spirits by their subcategory
     spiritItems.forEach(spirit => {
       const category = spirit.subCategory;
       if (category && categorizedSpirits.hasOwnProperty(category)) {
         categorizedSpirits[category].push(spirit);
-        console.log(`Added spirit to category ${category}:`, spirit.title);
       } else {
         console.warn(`Spirit has unknown category: ${category}`, spirit);
       }
     });
     
-    // Sort each category alphabetically by title
     for (const category in categorizedSpirits) {
       categorizedSpirits[category].sort((a, b) => {
         const titleA = (typeof a.title === 'object') ? a.title.en : a.title;
@@ -1316,12 +1212,9 @@
       });
     }
     
-    // Check if we have any spirits
     let totalSpirits = 0;
     for (const category in categorizedSpirits) {
-      const count = categorizedSpirits[category].length;
-      totalSpirits += count;
-      console.log(`Category ${category} has ${count} spirits`);
+      totalSpirits += categorizedSpirits[category].length;
     }
     
     if (totalSpirits === 0) {
@@ -1329,12 +1222,10 @@
       return;
     }
     
-    // Create containers for each category in the defined order
     categoryOrder.forEach(category => {
       const spirits = categorizedSpirits[category];
-      if (spirits.length === 0) return; // Skip empty categories
+      if (spirits.length === 0) return;
       
-      // Find the container for this category
       const categorySelector = `[data-liri-spirit-${category.replace('_', '-')}]`;
       const categoryContainer = document.querySelector(categorySelector);
       
@@ -1343,27 +1234,22 @@
         return;
       }
       
-      // Create the grid wrapper for this category
       const gridWrapper = document.createElement('div');
       gridWrapper.className = 'w-layout-grid accordion-content';
       gridWrapper.style.width = '100%';
       
-      // Add top spacer
       const topSpacer = document.createElement('div');
       topSpacer.className = 'spacer-small';
       gridWrapper.appendChild(topSpacer);
       
-      // Add each spirit in this category
       spirits.forEach(spirit => {
         const itemWrapper = document.createElement('div');
         itemWrapper.id = `w-node-${generateRandomId()}`;
         itemWrapper.className = 'menu-item-wrapper';
         
-        // Create title bar with dots and price
         const titleGrid = document.createElement('div');
         titleGrid.className = 'w-layout-grid menu-item-tittle';
         
-        // Create title element
         const titleElement = document.createElement('div');
         titleElement.id = `w-node-${generateRandomId()}`;
         if (typeof spirit.title === 'object' && spirit.title.en) {
@@ -1372,34 +1258,26 @@
           titleElement.textContent = spirit.title;
         } else {
           console.warn('Invalid spirit title', spirit);
-          return; // Skip this item
+          return;
         }
         
-        // Create dots element
         const dotsElement = document.createElement('div');
         dotsElement.id = `w-node-${generateRandomId()}`;
         dotsElement.className = 'menu-item-dots';
         
-        // Create price element
         const priceElement = document.createElement('div');
         priceElement.id = `w-node-${generateRandomId()}`;
         
-        // Format the prices
         let priceText = '';
         if (spirit.variants && spirit.variants.length > 0) {
-          // Sort variants by price (lowest first)
           const sortedVariants = [...spirit.variants].sort((a, b) => a.price - b.price);
-          
-          // Check if any price is zero (unavailable)
           const hasUnavailable = sortedVariants.some(variant => variant.price === 0);
           
           if (hasUnavailable) {
             priceText = 'unavailable';
           } else if (sortedVariants.length === 1) {
-            // Single price format
             priceText = sortedVariants[0].price.toFixed(2).replace('.', ',');
           } else {
-            // Multiple price format (comma separated)
             priceText = sortedVariants
               .map(variant => variant.price.toFixed(2).replace('.', ','))
               .join(' / ');
@@ -1410,13 +1288,11 @@
         
         priceElement.textContent = priceText;
         
-        // Add components to title grid
         titleGrid.appendChild(titleElement);
         titleGrid.appendChild(dotsElement);
         titleGrid.appendChild(priceElement);
         itemWrapper.appendChild(titleGrid);
         
-        // Add description if available
         if (spirit.description && 
            ((typeof spirit.description === 'object' && spirit.description.en) || 
             (typeof spirit.description === 'string' && spirit.description))) {
@@ -1435,12 +1311,10 @@
         gridWrapper.appendChild(itemWrapper);
       });
       
-      // Add bottom spacer
       const bottomSpacer = document.createElement('div');
       bottomSpacer.className = 'spacer-small';
       gridWrapper.appendChild(bottomSpacer);
       
-      // Add the grid to the category container
       categoryContainer.innerHTML = '';
       categoryContainer.appendChild(gridWrapper);
     });
@@ -1533,56 +1407,35 @@
   
   // Function to fix potential issues with wine container attributes
   function fixWineContainerAttributes() {
-    console.log("Checking and fixing container attribute cases...");
-    
-    // The correct format we expect for the data attributes
     const correctAttributeNames = [
-      // Wine attributes
       'data-liri-red-wine',
       'data-liri-white-wine', 
       'data-liri-rose-wine',
       'data-liri-sparkling-wine',
       'data-liri-wine',
-      // Beer attributes
       'data-liri-beer',
       'data-liri-beer-local',
       'data-liri-beer-imported'
     ];
     
-    // Check all elements on the page
     const allElements = document.querySelectorAll('*');
     
-    // Look for potential mismatched attributes
     allElements.forEach(el => {
-      // Check if element has any attributes
       if (!el.attributes || el.attributes.length === 0) return;
       
-      // Loop through all attributes
       Array.from(el.attributes).forEach(attr => {
-        // Skip if not a data attribute
         if (!attr.name.toLowerCase().startsWith('data-')) return;
         
-        // Check if it might be a menu attribute with incorrect casing
         if (attr.name.toLowerCase().includes('wine') || 
             attr.name.toLowerCase().includes('beer')) {
-          // Check if it matches any of our expected attributes but with different case
           const matchedAttribute = correctAttributeNames.find(
             correctAttr => correctAttr.toLowerCase() === attr.name.toLowerCase()
           );
           
           if (matchedAttribute && matchedAttribute !== attr.name) {
-            console.log(`Found mismatched case attribute: ${attr.name} - correcting to ${matchedAttribute}`);
-            
-            // Store the value
             const value = el.getAttribute(attr.name);
-            
-            // Remove the incorrectly cased attribute
             el.removeAttribute(attr.name);
-            
-            // Add with correct case
             el.setAttribute(matchedAttribute, value || '');
-            
-            console.log(`Corrected attribute on element:`, el.outerHTML.substring(0, 100) + "...");
           }
         }
       });
@@ -1591,9 +1444,6 @@
   
   // Add a new standalone function for loading and rendering spirits
   function loadSpiritMenuItems() {
-    console.log("Loading spirit items directly into category containers...");
-    
-    // Check for spirit category containers
     const spiritCategories = [
       'vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
       'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'
@@ -1605,7 +1455,6 @@
       const container = document.querySelector(selector);
       if (container) {
         foundAnyContainer = true;
-        // Show loading indicator in each category container
         container.innerHTML = '';
         container.appendChild(createLoadingIndicator(category));
       }
@@ -1616,19 +1465,12 @@
       return;
     }
     
-    // Check cache first
     const cachedData = getFromCache('spiritItem');
     if (cachedData) {
       processSpiritData(cachedData);
       return;
     }
     
-    // Configuration for Sanity API
-    const projectId = 'ivfy9y3f';
-    const dataset = 'production';
-    const apiVersion = '2024-03-19';
-    
-    // Create query for spirits
     const query = encodeURIComponent(`*[_type == "spiritItem"] | order(orderRank asc) {
       _id, 
       title,
@@ -1642,10 +1484,8 @@
       orderRank
     }`);
     
-    // Use the CORS-enabled API endpoint
     const url = `https://${projectId}.api.sanity.io/v${apiVersion}/data/query/${dataset}?query=${query}`;
     
-    // Fetch data using standard fetch API
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -1654,17 +1494,11 @@
         return response.json();
       })
       .then(data => {
-        console.log(`Spirit data received:`, data);
-        
-        // Save to cache for future use
         saveToCache('spiritItem', data);
-        
-        // Process the data
         processSpiritData(data);
       })
       .catch(error => {
         console.error("Error loading spirit data:", error);
-        // Show error in all category containers
         spiritCategories.forEach(category => {
           const container = document.querySelector(`[data-liri-spirit-${category}]`);
           if (container) {
@@ -1675,7 +1509,6 @@
       });
   }
 
-  // Process and render spirit data
   function processSpiritData(data) {
     const spiritItems = data.result || [];
     
@@ -1684,24 +1517,19 @@
       return;
     }
     
-    // Group spirits by category
     const spiritsByCategory = {};
     
-    // Process each spirit item
     spiritItems.forEach(spirit => {
       const category = spirit.subCategory;
       if (!category) return;
       
-      // Create category array if it doesn't exist
       if (!spiritsByCategory[category]) {
         spiritsByCategory[category] = [];
       }
       
-      // Add spirit to its category
       spiritsByCategory[category].push(spirit);
     });
     
-    // Sort each category alphabetically
     Object.keys(spiritsByCategory).forEach(category => {
       spiritsByCategory[category].sort((a, b) => {
         const titleA = (typeof a.title === 'object') ? a.title.en : a.title;
@@ -1710,62 +1538,44 @@
       });
     });
     
-    // Log what we found
-    Object.keys(spiritsByCategory).forEach(category => {
-      console.log(`Found ${spiritsByCategory[category].length} items for ${category}`);
-    });
-    
-    // Process each category directly
     const categories = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
                         'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
     
     categories.forEach(category => {
       const spirits = spiritsByCategory[category] || [];
-      
-      // Try to find the container directly
       const categoryContainer = document.querySelector(`[data-liri-spirit-${category}]`);
+      
       if (!categoryContainer) {
-        console.log(`Container not found for ${category}, skipping`);
         return;
       }
       
       if (spirits.length === 0) {
-        console.log(`No spirits found for category: ${category}`);
         categoryContainer.innerHTML = '';
         categoryContainer.appendChild(createEmptyMessage(category));
         return;
       }
       
-      console.log(`Found container for ${category}, populating with ${spirits.length} items`);
-      
-      // Create content
       renderSpiritCategory(categoryContainer, spirits);
     });
   }
   
-  // Function to render a single spirit category
   function renderSpiritCategory(container, spirits) {
-    // Create the content wrapper
     const contentWrapper = document.createElement('div');
     contentWrapper.className = 'w-layout-grid accordion-content';
     contentWrapper.style.width = '100%';
     
-    // Add top spacer
     const topSpacer = document.createElement('div');
     topSpacer.className = 'spacer-small';
     contentWrapper.appendChild(topSpacer);
     
-    // Add each spirit item
     spirits.forEach(spirit => {
       const itemWrapper = document.createElement('div');
       itemWrapper.id = `w-node-${generateRandomId()}`;
       itemWrapper.className = 'menu-item-wrapper';
       
-      // Create title bar with dots and price
       const titleGrid = document.createElement('div');
       titleGrid.className = 'w-layout-grid menu-item-tittle';
       
-      // Title element
       const titleElement = document.createElement('div');
       titleElement.id = `w-node-${generateRandomId()}`;
       if (typeof spirit.title === 'object' && spirit.title.en) {
@@ -1773,34 +1583,27 @@
       } else if (typeof spirit.title === 'string') {
         titleElement.textContent = spirit.title;
       } else {
-        return; // Skip invalid items
+        return;
       }
       
-      // Dots element
       const dotsElement = document.createElement('div');
       dotsElement.id = `w-node-${generateRandomId()}`;
       dotsElement.className = 'menu-item-dots';
       
-      // Price element
       const priceElement = document.createElement('div');
       priceElement.id = `w-node-${generateRandomId()}`;
       
-      // Format price
       let priceText = '';
       if (spirit.variants && spirit.variants.length > 0) {
-        // Sort variants by price (lowest first)
         const sortedVariants = [...spirit.variants].sort((a, b) => a.price - b.price);
         
-        // Check if any price is zero (unavailable)
         const hasUnavailable = sortedVariants.some(variant => variant.price === 0);
         
         if (hasUnavailable) {
           priceText = 'unavailable';
         } else if (sortedVariants.length === 1) {
-          // Single price format
           priceText = sortedVariants[0].price.toFixed(2).replace('.', ',');
         } else {
-          // Multiple price format
           priceText = sortedVariants
             .map(variant => variant.price.toFixed(2).replace('.', ','))
             .join(' / ');
@@ -1811,13 +1614,11 @@
       
       priceElement.textContent = priceText;
       
-      // Add components to title grid
       titleGrid.appendChild(titleElement);
       titleGrid.appendChild(dotsElement);
       titleGrid.appendChild(priceElement);
       itemWrapper.appendChild(titleGrid);
       
-      // Add description if available
       if (spirit.description && 
          ((typeof spirit.description === 'object' && spirit.description.en) || 
           (typeof spirit.description === 'string' && spirit.description))) {
@@ -1836,30 +1637,22 @@
       contentWrapper.appendChild(itemWrapper);
     });
     
-    // Add bottom spacer
     const bottomSpacer = document.createElement('div');
     bottomSpacer.className = 'spacer-small';
     contentWrapper.appendChild(bottomSpacer);
     
-    // Clear and add to container
     container.innerHTML = '';
     container.appendChild(contentWrapper);
   }
 
-  // Update the initialization code with our standalone spirit loading
   function initializeWithSpirits() {
-    // Initialize standard menus
     initializeMenus();
-    
-    // Add a delay before loading spirits to ensure DOM is ready
     setTimeout(loadSpiritMenuItems, 1000);
   }
 
-  // Initialize when the DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeWithSpirits);
   } else {
-    // DOM already loaded
     initializeWithSpirits();
   }
 
