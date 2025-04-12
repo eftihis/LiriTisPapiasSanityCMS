@@ -1610,9 +1610,6 @@
     // Clear and add to container
     container.innerHTML = '';
     container.appendChild(contentWrapper);
-    
-    // Make sure it's visible
-    container.style.height = 'auto';
   }
 
   // Update the initialization code with our standalone spirit loading
