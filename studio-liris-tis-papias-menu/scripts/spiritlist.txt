@@ -1,0 +1,370 @@
+vodka:
+
+
+42 Below
+8,00
+Absolut
+8,00
+Absolut Citron
+8,00
+Beluga
+11,00
+Belvedere
+11,00
+Crystal Head
+12,00
+Grey Goose
+12,00
+Ketel
+9,00
+Nemiroff Deluxe
+8,00
+Regular X
+unavailable
+Regular X Premium
+unavailable
+Stolichnaya
+8,00
+Zumbrowka
+8,00
+
+gin:
+
+GIn
+Bathtub
+11,00
+Beefeater 24
+9,50
+Boatyard
+9,00
+Boatyard Old Tom
+9,00
+Bobby's
+10,00
+Bombay Saphire
+8,00
+Broker's
+8,00
+Bulldog
+9,00
+Citadelle Original Dry
+9,00
+Del Profesore
+13,00
+Elephant
+13,00
+Etsu Handcrafted
+11,00
+Filliers
+13,00
+Gabriel Boudier Saffron
+11,00
+Gin Mare
+11,00
+Gin Raw
+13,00
+Grace
+10,00
+Hendrick's
+11,00
+Himbrimi
+15,00
+Ki No Bi
+15,00
+Martin Miller's
+9,50
+Mataroa
+11,00
+Mataroa Pink
+11,00
+Monkey 47
+14,00
+Nikka Coffey
+10,00
+Nuage
+10,00
+Roku
+10,00
+Oxley
+11,00
+Tanqueray
+8,00
+Tanqueray No10
+11,00
+The Botanist
+13,00
+Votanikon
+9,00
+Walcher
+10,00
+
+tequila:
+
+
+Altos Plata
+9,00
+Calle 23 Blanco
+16,00
+Calle 23 Reposado
+20,00
+Casarodes Blanco
+9,00
+Casarodes Reposado
+9,50
+Ocho Blanco
+9,00
+Ocho Reposado
+9,50
+Patron Blanco
+14,00
+Patron Reposado
+16,00
+Topanito Blanco
+9,00
+Topanito Reposado
+9,50
+
+MEZCAL:
+
+Mezcal Amores
+16,00
+Bruxo Elixir Des Los Terrenales
+12,00
+Elemental Koch
+12,00
+
+RUM:
+
+Angostura 1919
+12,00
+Angostura No5
+8,00
+Angostura No7
+9,00
+Angostura Reserva
+8,00
+Appelton Estate 12
+9,00
+Appelton Estate Reserve Blend
+11,00
+Appelton Estate Signature
+9,00
+Bacardi Anejo
+8,00
+Bacardi Carta Fuego
+8,00
+Bacardi Carta Oro
+8,00
+Bacardi Reserva Ocho
+10,00
+Bacardi Spiced
+8,00
+Bacardi White
+8,00
+Chairmans Reserve
+11,00
+Chairmans Reserve Forgotten Cask
+14,00
+Clairin Communal
+11,00
+Clairin Sajous Agricole
+14,00
+Clairin Vaval
+14,00
+Diplomatico Exclusiva Reserva
+11,00
+Diplomatico Manduano
+9,00
+Diplomatico Vintage 2007
+32,00
+Don Papa
+14,00
+Doorley’s 12 Years
+14,00
+Doorley’s 8 Years
+12,00
+Doorley's XO
+12,00
+El Dorado 12
+11,00
+Flor de Cana 12
+11,00
+Flor de Cana 4
+9,00
+Flor de Cana 7
+9,00
+Goslings Black 151
+13,00
+Goslings Black Seal
+11,00
+Hampten 2016
+34,00
+Hanava Reserva 5
+9,00
+Havana Anejo 3
+9,00
+Havana Anejo 7
+10,00
+Plantation 3 stars
+8,00
+Plantation Barbados Rum
+16,00
+Plantation Original Dark
+9,00
+Plantation Pineapple
+10,00
+Plantation XO
+16,00
+RUM
+16,00
+Rhum J.M
+15,00
+Ron Zacapa 23
+17,00
+Rum-Bar Brown
+9,00
+Rum-Bar White
+8,00
+Rumbullion
+16,00
+Santa Teressa
+11,00
+Santa Teressa Solera Rum
+11,00
+Veritas
+10,00
+Worthy Park Single Estate Reserve
+18,00
+
+Spiced rum:
+Angostura Taboo
+9,00
+Bayou Spiced
+9,00
+Chairmans Spiced
+9,00
+Foursquare Spiced Rum
+11,00
+Kraken
+9,00
+Sailor Jerry
+8,00
+
+IRISH WHIskEY:
+
+Bushmils 10 Single Malt
+15,00
+Bushmils Black Bush
+9,00
+Bushmils Original
+8,00
+Busker
+8,00
+Flaming Pig
+10,00
+Jameson
+8,00
+Red Breast Single Pot Still
+16,00
+Roe & CO
+9,50
+Southern Comfort
+8,00
+Tullamore Dew
+8,00
+
+SCOTCH WHISKEY:
+
+Arran Single Malt
+11,00
+Coperies Single Malt
+12,00
+Dewars
+8,00
+Dewars Caribbean
+8,00
+Glenfiddich
+9,50
+Heig
+8,00
+Jameson Black Barrel
+9,50
+Johnnie Walker Red Label
+8,00
+Laphroaig Islay
+12,00
+Pig's Nose Blend Malt
+9,00
+
+BOURBON & RYE:
+
+Bulleit Bourbon
+9,00
+Buleit Rye
+9,50
+Canadian Club
+8,00
+Jack Daniels
+9,00
+Maker's Mark
+10,00
+Sazerac Rye
+11,00
+
+COGNAC:
+
+Metaxa 3*
+5,00
+Metaxa 5*
+6,00
+Metaxa 7*
+7,00
+Hennessy Very Special
+8,00
+Michael Byron Calvados
+8,00
+Martel VS
+9,00
+Mertel VS
+------
+Mertel VS OP
+------
+
+LIQUEUR:
+
+Mastiha Skinos
+8,00
+Italicus
+9,00
+St. Germain
+8,00
+
+BITTERS:
+
+Amaro Montenegro
+8,00
+Amerisse
+8,00
+Aperol
+7,00
+Campari
+8,00
+Fernet Branca
+8,00
+Jägermeister
+8,00
+Suze
+8,00
+
+Greek spirits:
+
+Axia Mastiha
+8,00
+Ouzo 12
+4,00
+Raki
+8,00
+Rakomelo
+10,00
+
+ALL THE PRICES YOU SEE HERE ARE FOR 1 SIZE VARIANT WE WILL CALL "Glass". For items where the price is not kown or the product is shown as unavailable just 0.00 as the price. Good luck

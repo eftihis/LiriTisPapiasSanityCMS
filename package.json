@@ -2,5 +2,8 @@
   "devDependencies": {
     "@sanity/types": "^3.84.0",
     "@types/node": "^22.14.0"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.5"
   }
 }
