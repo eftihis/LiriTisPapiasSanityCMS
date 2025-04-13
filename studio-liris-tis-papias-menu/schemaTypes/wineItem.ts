@@ -90,15 +90,15 @@ export default defineType({
     }),
     defineField({
       name: 'glassPrice',
-      title: 'Glass Price',
+      title: 'Glass Price (Optional)',
       type: 'number',
-      validation: (Rule) => Rule.required().precision(2)
+      validation: (Rule) => Rule.precision(2)
     }),
     defineField({
       name: 'bottlePrice',
-      title: 'Bottle Price (Optional)',
+      title: 'Bottle Price',
       type: 'number',
-      validation: (Rule) => Rule.precision(2)
+      validation: (Rule) => Rule.required().precision(2)
     }),
     defineField({
       name: 'orderRank',
