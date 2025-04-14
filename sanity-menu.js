@@ -1174,21 +1174,21 @@
   function renderSpiritItems(container, spiritItems, config) {
     const categorizedSpirits = {};
     
-    const categoryOrder = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
+    const categoryOrder = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced rum', 'irish whiskey', 'scotch whiskey', 'bourbon & rye', 'cognac', 'liqueur', 'bitters', 'greek spirits'];
     const categoryLabels = {
       'vodka': 'Vodka',
       'gin': 'Gin',
       'tequila': 'Tequila',
       'mezcal': 'Mezcal',
       'rum': 'Rum',
-      'spiced-rum': 'Spiced Rum',
-      'irish-whiskey': 'Irish Whiskey',
-      'scotch-whiskey': 'Scotch Whiskey',
-      'bourbon-rye': 'Bourbon & Rye',
+      'spiced rum': 'Spiced Rum',
+      'irish whiskey': 'Irish Whiskey',
+      'scotch whiskey': 'Scotch Whiskey',
+      'bourbon & rye': 'Bourbon & Rye',
       'cognac': 'Cognac',
       'liqueur': 'Liqueur',
       'bitters': 'Bitters',
-      'greek-spirits': 'Greek Spirits'
+      'greek spirits': 'Greek Spirits'
     };
     
     categoryOrder.forEach(category => {
@@ -1226,7 +1226,9 @@
       const spirits = categorizedSpirits[category];
       if (spirits.length === 0) return;
       
-      const categorySelector = `[data-liri-spirit-${category.replace('_', '-')}]`;
+      // Convert category to kebab-case for selectors
+      const kebabCategory = category.replace(/\s+/g, '-').replace(/&/g, '-');
+      const categorySelector = `[data-liri-spirit-${kebabCategory}]`;
       const categoryContainer = document.querySelector(categorySelector);
       
       if (!categoryContainer) {
@@ -1444,14 +1446,17 @@
   
   // Add a new standalone function for loading and rendering spirits
   function loadSpiritMenuItems() {
+    // Update the category values to match schema
     const spiritCategories = [
-      'vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
-      'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'
+      'vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced rum', 'irish whiskey', 
+      'scotch whiskey', 'bourbon & rye', 'cognac', 'liqueur', 'bitters', 'greek spirits'
     ];
     
     let foundAnyContainer = false;
     spiritCategories.forEach(category => {
-      const selector = `[data-liri-spirit-${category}]`;
+      // Convert category to kebab-case for selectors
+      const kebabCategory = category.replace(/\s+/g, '-').replace(/&/g, '-');
+      const selector = `[data-liri-spirit-${kebabCategory}]`;
       const container = document.querySelector(selector);
       if (container) {
         foundAnyContainer = true;
@@ -1538,12 +1543,15 @@
       });
     });
     
-    const categories = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced-rum', 'irish-whiskey', 
-                        'scotch-whiskey', 'bourbon-rye', 'cognac', 'liqueur', 'bitters', 'greek-spirits'];
+    // Update the category values to match schema
+    const categories = ['vodka', 'gin', 'tequila', 'mezcal', 'rum', 'spiced rum', 'irish whiskey', 
+                        'scotch whiskey', 'bourbon & rye', 'cognac', 'liqueur', 'bitters', 'greek spirits'];
     
     categories.forEach(category => {
       const spirits = spiritsByCategory[category] || [];
-      const categoryContainer = document.querySelector(`[data-liri-spirit-${category}]`);
+      // Convert category to kebab-case for selectors
+      const kebabCategory = category.replace(/\s+/g, '-').replace(/&/g, '-');
+      const categoryContainer = document.querySelector(`[data-liri-spirit-${kebabCategory}]`);
       
       if (!categoryContainer) {
         return;
