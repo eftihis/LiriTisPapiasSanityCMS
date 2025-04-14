@@ -157,9 +157,9 @@
     } else if (config.documentType === 'regularCocktailItem') {
       query += ', category';
     } else if (config.documentType === 'wineItem') {
-      query += ', category';
+      query += ', subCategory, glassPrice, bottlePrice, grapeVarieties';
     } else if (config.documentType === 'beerItem') {
-      query += ', category';
+      query += ', beerType, size, price';
     } else if (config.documentType === 'spiritItem') {
       query += ', subCategory, variants[]{ _key, size, price }';
     }
@@ -238,8 +238,6 @@
     } else if (config.template === 'spirit') {
       renderSpiritItems(container, filteredItems, config);
     }
-    
-    console.log(`Successfully rendered ${config.name} data`);
   }
   
   // Function to render standard menu items (coffee, tea, etc.)
@@ -626,27 +624,25 @@
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    let foundWineContainers = false;
-    const allElements = document.querySelectorAll('*');
-    for (const el of allElements) {
-      const liriAttrs = Array.from(el.attributes || [])
-        .filter(attr => attr.name && attr.name.toLowerCase().startsWith('data-liri-') && 
-                (attr.name.toLowerCase().includes('wine') || attr.name.toLowerCase().includes('red-wine') || 
-                 attr.name.toLowerCase().includes('white-wine') || attr.name.toLowerCase().includes('rose-wine') || 
-                 attr.name.toLowerCase().includes('sparkling-wine')))
-        .map(attr => attr.name);
-      
-      if (liriAttrs.length > 0) {
-        foundWineContainers = true;
-      }
-    }
+    // Check for wine category containers
+    const wineContainers = [];
     
-    if (!foundWineContainers) {
-      console.error("NO WINE CONTAINERS FOUND - check HTML for correct data-liri-* attributes");
-    }
+    // Check for all possible wine category containers
+    ['sparkling-wine', 'white-wine', 'rose-wine', 'red-wine'].forEach(category => {
+      const selector = `[data-liri-${category}]`;
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        wineContainers.push(category);
+      }
+    });
+    
+    // No need to show error about missing containers since we'll create them if needed
     
     // Group wines by their subcategory
     const categorizedWines = {};
+    
+    // Define default category to use if none is specified
+    const defaultCategory = 'white-wine';
     
     // Define expected categories in the order they should appear
     const categoryOrder = ['sparkling-wine', 'white-wine', 'rose-wine', 'red-wine'];
@@ -657,24 +653,6 @@
       'red-wine': 'Red Wine'
     };
     
-    // Also check for possible case variants of these categories in the HTML
-    console.log("Checking for case variants of wine category attributes:");
-    categoryOrder.forEach(category => {
-      const variants = [
-        `data-liri-${category}`,
-        `data-liri-${category.toUpperCase()}`,
-        `data-liri-${category.toLowerCase()}`,
-        `data-liri-${category.replace(/-/g, '_')}`
-      ];
-      
-      variants.forEach(variant => {
-        const elements = document.querySelectorAll(`[${variant}]`);
-        if (elements.length > 0) {
-          console.log(`Found ${elements.length} elements with attribute ${variant}`);
-        }
-      });
-    });
-    
     // Initialize categories
     categoryOrder.forEach(category => {
       categorizedWines[category] = [];
@@ -682,12 +660,19 @@
     
     // Group wines by their subcategory
     wineItems.forEach(wine => {
-      const category = wine.subCategory;
-      if (category && categorizedWines.hasOwnProperty(category)) {
+      // Get the subCategory directly from the schema field
+      let rawCategory = wine.subCategory || '';
+      
+      // Convert from potential space-separated format to kebab-case
+      const category = convertToKebabCase(rawCategory, defaultCategory);
+      
+      // If wine has a valid category, add it to that category
+      if (categorizedWines.hasOwnProperty(category)) {
         categorizedWines[category].push(wine);
-        console.log(`Added wine to category ${category}:`, wine.title);
       } else {
-        console.warn(`Wine has unknown category: ${category}`, wine);
+        // Otherwise, add it to the default category
+        categorizedWines[defaultCategory].push(wine);
+        console.warn(`Wine has unknown category: ${rawCategory}, adding to ${defaultCategory}`);
       }
     });
     
@@ -696,7 +681,6 @@
     for (const category in categorizedWines) {
       const count = categorizedWines[category].length;
       totalWines += count;
-      console.log(`Category ${category} has ${count} wines`);
     }
     
     if (totalWines === 0) {
@@ -710,6 +694,7 @@
     
     // Check if any category containers actually exist
     for (const category of categoryOrder) {
+      // Use the correct data attribute format
       const selector = `[data-liri-${category}]`;
       if (document.querySelector(selector)) {
         needToCreateCategoryContainers = false;
@@ -750,6 +735,7 @@
         
         // Category container with data attribute
         const categoryContainer = document.createElement('div');
+        // Use the correct data attribute format
         categoryContainer.setAttribute(`data-liri-${category}`, '');
         
         // Show loading indicator in the category container
@@ -769,16 +755,14 @@
       return; // We've handled everything in this case
     }
     
-    // Clear the main container since we'll populate individual category containers
-    container.innerHTML = '';
-    
     // Original flow - categories exist, populate them
     categoryOrder.forEach(category => {
       const wines = categorizedWines[category];
       if (wines.length === 0) return; // Skip empty categories
       
-      // Find the container for this category
+      // Find the container for this category using the correct attribute
       const categorySelector = `[data-liri-${category}]`;
+      console.log(`Searching for wine container with selector: ${categorySelector}`);
       let categoryContainer = document.querySelector(categorySelector);
       
       // Try different selector variations if needed
@@ -848,11 +832,11 @@
         const priceElement = document.createElement('div');
         priceElement.id = `w-node-${generateRandomId()}`;
         
-        // Format glass price
+        // Format glass price if available
         const glassPrice = typeof wine.glassPrice === 'number' ? 
           wine.glassPrice.toFixed(2).replace('.', ',') : '';
         
-        // Format bottle price if it exists
+        // Format bottle price
         const bottlePrice = typeof wine.bottlePrice === 'number' ? 
           wine.bottlePrice.toFixed(2).replace('.', ',') : '';
         
@@ -861,9 +845,12 @@
           priceElement.textContent = `${glassPrice} / ${bottlePrice}`;
         } else if (glassPrice) {
           priceElement.textContent = glassPrice;
+        } else if (bottlePrice) {
+          priceElement.textContent = bottlePrice;
         } else {
+          // Show a default empty price if none is provided
+          priceElement.textContent = '';
           console.warn('Missing price for wine item:', wine);
-          return; // Skip this item
         }
         
         // Add components to title grid
@@ -884,7 +871,6 @@
           }
           
           // Add grape varieties in parentheses with special span
-          let grapeVarietiesText = '';
           if (wine.grapeVarieties && typeof wine.grapeVarieties === 'object' && wine.grapeVarieties.en) {
             const grapeVarietiesSpan = document.createElement('span');
             grapeVarietiesSpan.className = 'grape_variety';
@@ -918,25 +904,21 @@
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    let foundBeerContainers = false;
-    const allElements = document.querySelectorAll('*');
-    for (const el of allElements) {
-      const liriAttrs = Array.from(el.attributes || [])
-        .filter(attr => attr.name && attr.name.toLowerCase().startsWith('data-liri-') && 
-                (attr.name.toLowerCase().includes('beer') || attr.name.toLowerCase().includes('beer-local') || 
-                 attr.name.toLowerCase().includes('beer-imported')))
-        .map(attr => attr.name);
-      
-      if (liriAttrs.length > 0) {
-        foundBeerContainers = true;
+    // Check for beer category containers
+    const beerContainers = [];
+    
+    // Check for all possible beer category containers with EXACT attributes
+    ['beer-local', 'beer-imported'].forEach(category => {
+      const selector = `[data-liri-${category}]`;
+      const elements = document.querySelectorAll(selector);
+      if (elements.length > 0) {
+        beerContainers.push(category);
       }
-    }
+    });
     
-    if (!foundBeerContainers) {
-      console.error("NO BEER CONTAINERS FOUND - check HTML for correct data-liri-* attributes");
-    }
+    // No need to show error about missing containers since we'll create them if needed
     
-    // Group beers by their beerType
+    // Group beers by their type
     const categorizedBeers = {};
     
     // Define expected categories in the order they should appear
@@ -951,14 +933,25 @@
       categorizedBeers[category] = [];
     });
     
-    // Group beers by their type
+    // Group beers by their type with strict categorization
     beerItems.forEach(beer => {
-      const category = beer.beerType;
-      if (category && categorizedBeers.hasOwnProperty(category)) {
+      // Get the beerType directly from the schema field
+      let rawCategory = beer.beerType || '';
+      
+      // Strict category handling - only 'local' or default to 'imported'
+      let category = 'imported'; // Default to imported
+      
+      // Simple check - if it's 'local', use that, otherwise 'imported'
+      if (typeof rawCategory === 'string' && rawCategory.toLowerCase().trim() === 'local') {
+        category = 'local';
+      }
+      
+      // If beer has a valid category, add it to that category
+      if (categorizedBeers.hasOwnProperty(category)) {
         categorizedBeers[category].push(beer);
-        console.log(`Added beer to category ${category}:`, beer.title);
       } else {
-        console.warn(`Beer has unknown category: ${category}`, beer);
+        // This shouldn't happen with our strict mapping, but just in case
+        categorizedBeers['imported'].push(beer);
       }
     });
     
@@ -981,6 +974,7 @@
     
     // Check if any category containers actually exist
     for (const category of categoryOrder) {
+      // Use the correct data attribute format: data-liri-beer-local, data-liri-beer-imported
       const selector = `[data-liri-beer-${category}]`;
       if (document.querySelector(selector)) {
         needToCreateCategoryContainers = false;
@@ -1021,6 +1015,7 @@
         
         // Category container with data attribute
         const categoryContainer = document.createElement('div');
+        // Use the correct data attribute format
         categoryContainer.setAttribute(`data-liri-beer-${category}`, '');
         
         // Show loading indicator in the category container
@@ -1045,8 +1040,9 @@
       const beers = categorizedBeers[category];
       if (beers.length === 0) return; // Skip empty categories
       
-      // Find the container for this category
+      // Find the container for this category using the correct attribute
       const categorySelector = `[data-liri-beer-${category}]`;
+      console.log(`Searching for beer container with selector: ${categorySelector}`);
       let categoryContainer = document.querySelector(categorySelector);
       
       // Try different selector variations if needed
@@ -1138,11 +1134,12 @@
           beer.price.toFixed(2).replace('.', ',') : '';
         
         if (!priceText) {
+          // Display empty price instead of skipping
+          priceElement.textContent = '';
           console.warn('Missing price for beer item:', beer);
-          return; // Skip this item
+        } else {
+          priceElement.textContent = priceText;
         }
-        
-        priceElement.textContent = priceText;
         
         // Add components to title grid
         titleGrid.appendChild(titleElement);
@@ -1273,6 +1270,7 @@
         let priceText = '';
         if (spirit.variants && spirit.variants.length > 0) {
           const sortedVariants = [...spirit.variants].sort((a, b) => a.price - b.price);
+          
           const hasUnavailable = sortedVariants.some(variant => variant.price === 0);
           
           if (hasUnavailable) {
@@ -1327,6 +1325,61 @@
     return Array.from({ length: 24 }, () => 
       "0123456789abcdef"[Math.floor(Math.random() * 16)]
     ).join('');
+  }
+  
+  // Helper function to convert from space-separated to kebab-case
+  function convertToKebabCase(input, defaultValue) {
+    if (!input) return defaultValue;
+    
+    // Handle the case where input might not be a string
+    if (typeof input !== 'string') {
+      console.warn(`Non-string category value received: ${input}`);
+      return defaultValue;
+    }
+    
+    // Convert to lowercase and trim whitespace
+    const cleaned = input.toLowerCase().trim();
+    
+    // Define mappings from space-separated to kebab-case
+    const mappings = {
+      'red wine': 'red-wine',
+      'white wine': 'white-wine',
+      'rose wine': 'rose-wine',
+      'rosé wine': 'rose-wine',
+      'sparkling wine': 'sparkling-wine',
+      'red': 'red-wine',
+      'white': 'white-wine',
+      'rose': 'rose-wine',
+      'rosé': 'rose-wine',
+      'sparkling': 'sparkling-wine',
+      // Add direct mappings too
+      'red-wine': 'red-wine',
+      'white-wine': 'white-wine',
+      'rose-wine': 'rose-wine',
+      'sparkling-wine': 'sparkling-wine'
+    };
+    
+    // Check if we have a direct mapping
+    if (mappings[cleaned]) {
+      return mappings[cleaned];
+    }
+    
+    // Check for partial matches
+    if (cleaned.includes('red')) {
+      return 'red-wine';
+    }
+    if (cleaned.includes('white')) {
+      return 'white-wine';
+    }
+    if (cleaned.includes('rose') || cleaned.includes('rosé')) {
+      return 'rose-wine';
+    }
+    if (cleaned.includes('sparkling')) {
+      return 'sparkling-wine';
+    }
+    
+    // If no match, return the default
+    return defaultValue;
   }
   
   // Define menu sections with their configurations
