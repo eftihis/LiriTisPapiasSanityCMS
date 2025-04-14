@@ -184,12 +184,7 @@
         return response.json();
       })
       .then(data => {
-        console.log(`Sanity ${config.name} data received:`, data);
-        
-        // Save to cache for future use
         saveToCache(config.documentType, data);
-        
-        // Process the data
         processMenuData(data, container, config);
       })
       .catch(error => {
@@ -227,18 +222,13 @@
   
   // Function to render standard menu items (coffee, tea, etc.)
   function renderStandardMenuItems(container, menuItems, config) {
-    // Show loading indicator while preparing the grid
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    // Create the grid wrapper to match your structure
     const gridWrapper = document.createElement('div');
     gridWrapper.className = 'w-layout-grid menu-section-wrapper';
     
-    // Add each menu item from Sanity
     menuItems.forEach(item => {
-      console.log(`Processing ${config.name} item:`, item);
-      
       const itemWrapper = document.createElement('div');
       itemWrapper.className = 'menu-item-wrapper';
       
@@ -314,12 +304,9 @@
       }
     });
     
-    // Check if we have any cocktails
     let totalCocktails = 0;
     for (const category in categorizedCocktails) {
-      const count = categorizedCocktails[category].length;
-      totalCocktails += count;
-      console.log(`Category ${category} has ${count} cocktails`);
+      totalCocktails += categorizedCocktails[category].length;
     }
     
     if (totalCocktails === 0) {
@@ -328,19 +315,15 @@
       return;
     }
     
-    // Clear the main container since we'll be populating individual category containers
     container.innerHTML = '';
     
-    // Create containers for each category in the defined order
     categoryOrder.forEach(category => {
       const cocktails = categorizedCocktails[category];
-      if (cocktails.length === 0) return; // Skip empty categories
+      if (cocktails.length === 0) return;
       
-      // Find the container for this category
-      // The data attributes in HTML have dashes, not underscores
       let categorySelector;
       if (category === 'g_and_t') {
-        categorySelector = '[data-liri-g-and-t]'; // Special case for G&T
+        categorySelector = '[data-liri-g-and-t]';
       } else {
         categorySelector = `[data-liri-${category.replace(/_/g, '-')}]`;
       }
@@ -436,28 +419,20 @@
   
   // Function to render cocktail items with complex structure
   function renderCocktailItems(container, cocktailItems, config) {
-    // Show loading indicator in the container
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    // Create the main grid wrapper
     const gridWrapper = document.createElement('div');
     gridWrapper.className = 'w-layout-grid menu-section-wrapper';
     
-    // Create the dynamic list container
     const dynList = document.createElement('div');
     dynList.className = 'w-dyn-list';
     
-    // Create the collection list for items
     const collectionList = document.createElement('div');
     collectionList.setAttribute('role', 'list');
     collectionList.className = 'collection-list w-dyn-items';
     
-    // Add each cocktail from Sanity
     cocktailItems.forEach(cocktail => {
-      console.log(`Processing cocktail:`, cocktail);
-      
-      // Get price and title
       const priceText = typeof cocktail.price === 'number' ? 
         cocktail.price.toFixed(2).replace('.', ',') : '';
       
@@ -468,7 +443,7 @@
         titleText = cocktail.title;
       } else {
         console.error(`Missing or invalid title for cocktail:`, cocktail);
-        return; // Skip this item
+        return;
       }
       
       // Get description
