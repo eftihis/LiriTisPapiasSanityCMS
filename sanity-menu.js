@@ -1227,7 +1227,10 @@
       if (spirits.length === 0) return;
       
       // Convert category to kebab-case for selectors
-      const kebabCategory = category.replace(/\s+/g, '-').replace(/&/g, '-');
+      const kebabCategory = category
+        .replace(/\s*&\s*/g, '-and-')  // Replace & with -and-
+        .replace(/\s+/g, '-')          // Replace spaces with hyphens
+        .toLowerCase();                 // Convert to lowercase
       const categorySelector = `[data-liri-spirit-${kebabCategory}]`;
       const categoryContainer = document.querySelector(categorySelector);
       
@@ -1455,7 +1458,10 @@
     let foundAnyContainer = false;
     spiritCategories.forEach(category => {
       // Convert category to kebab-case for selectors
-      const kebabCategory = category.replace(/\s+/g, '-').replace(/&/g, '-');
+      const kebabCategory = category
+        .replace(/\s*&\s*/g, '-and-')  // Replace & with -and-
+        .replace(/\s+/g, '-')          // Replace spaces with hyphens
+        .toLowerCase();                 // Convert to lowercase
       const selector = `[data-liri-spirit-${kebabCategory}]`;
       const container = document.querySelector(selector);
       if (container) {
@@ -1550,8 +1556,12 @@
     categories.forEach(category => {
       const spirits = spiritsByCategory[category] || [];
       // Convert category to kebab-case for selectors
-      const kebabCategory = category.replace(/\s+/g, '-').replace(/&/g, '-');
-      const categoryContainer = document.querySelector(`[data-liri-spirit-${kebabCategory}]`);
+      const kebabCategory = category
+        .replace(/\s*&\s*/g, '-and-')  // Replace & with -and-
+        .replace(/\s+/g, '-')          // Replace spaces with hyphens
+        .toLowerCase();                 // Convert to lowercase
+      const categorySelector = `[data-liri-spirit-${kebabCategory}]`;
+      const categoryContainer = document.querySelector(categorySelector);
       
       if (!categoryContainer) {
         return;
