@@ -80,10 +80,10 @@ export default defineType({
       type: 'string',
       options: {
         list: [
-          {title: 'Red Wine', value: 'red-wine'},
-          {title: 'White Wine', value: 'white-wine'},
-          {title: 'Rosé Wine', value: 'rose-wine'},
-          {title: 'Sparkling Wine', value: 'sparkling-wine'}
+          {title: 'Red Wine', value: 'red wine'},
+          {title: 'White Wine', value: 'white wine'},
+          {title: 'Rosé Wine', value: 'rose wine'},
+          {title: 'Sparkling Wine', value: 'sparkling wine'}
         ]
       },
       validation: (Rule) => Rule.required()
