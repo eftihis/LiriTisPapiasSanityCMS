@@ -61,6 +61,12 @@ export default defineType({
       validation: (Rule) => Rule.required().precision(2)
     }),
     defineField({
+      name: 'isAlcoholFree',
+      title: 'Is Alcohol Free',
+      type: 'boolean',
+      validation: (Rule) => Rule.required()
+    }),
+    defineField({
       name: 'cocktailTags',
       title: 'Cocktail Tags',
       type: 'array',
