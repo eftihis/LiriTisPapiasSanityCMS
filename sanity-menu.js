@@ -95,85 +95,83 @@
       return;
     }
     
-    // Show loading indicator
     container.innerHTML = '';
     container.appendChild(createLoadingIndicator(config.name));
     
-    // Check cache first
     const cachedData = getFromCache(config.documentType);
     if (cachedData) {
       processMenuData(cachedData, container, config);
       return;
     }
     
-    // Create query based on the document type and template type
-    let query;
+    // Build query based on config
+    let query = `*[_type == "${config.documentType}"]`;
     
-    if (config.template === 'cocktail') {
-      // Special query for cocktails including description and flavor tags
-      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
-        _id, 
-        title,
-        price,
-        description,
-        cocktailTags[]->{ name },
-        isNew
-      }`);
-    } else if (config.template === 'regularCocktail') {
-      // Special query for regular cocktails including category and optional description
-      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
-        _id, 
-        title,
-        price,
-        description,
-        category
-      }`);
-    } else if (config.template === 'wine') {
-      // Special query for wines including subcategory, glass/bottle prices, and grape varieties
-      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
-        _id, 
-        title,
-        description,
-        grapeVarieties,
-        subCategory,
-        glassPrice,
-        bottlePrice
-      }`);
-    } else if (config.template === 'beer') {
-      // Special query for beers including type and optional description
-      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
-        _id, 
-        title,
-        price,
-        description,
-        beerType,
-        size
-      }`);
-    } else if (config.template === 'spirit') {
-      // Special query for spirits including subcategory, variants, and description
-      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
-        _id, 
-        title,
-        description,
-        subCategory,
-        variants[] {
-          _key,
-          size,
-          price
-        },
-        orderRank
-      }`);
-    } else {
-      // Standard query for simple menu items
-      query = encodeURIComponent(`*[_type == "${config.documentType}"] | order(orderRank asc) {
-        _id, 
-        title,
-        price
-      }`);
+    // Special case for signature cocktails
+    if (config.documentType === 'signatureCocktailItem') {
+      // Special handling for isAlcoholFree field which might not exist in all documents
+      if (config.filter && config.filter.hasOwnProperty('isAlcoholFree')) {
+        if (config.filter.isAlcoholFree === true) {
+          // For non-alcoholic cocktails, specifically look for isAlcoholFree == true
+          query = `*[_type == "signatureCocktailItem" && isAlcoholFree == true]`;
+        } else {
+          // For alcoholic cocktails, either isAlcoholFree is false or not defined
+          query = `*[_type == "signatureCocktailItem" && (isAlcoholFree == false || !defined(isAlcoholFree))]`;
+        }
+      }
+    } 
+    // Standard filtering for other document types
+    else if (config.filter) {
+      const filterConditions = Object.entries(config.filter)
+        .map(([key, value]) => {
+          // For boolean values
+          if (typeof value === 'boolean') {
+            return `${key} == ${value}`;
+          }
+          // For string values
+          else if (typeof value === 'string') {
+            return `${key} == "${value}"`;
+          }
+          // For number values  
+          else if (typeof value === 'number') {
+            return `${key} == ${value}`;
+          }
+          return `${key} == ${JSON.stringify(value)}`;
+        })
+        .join(' && ');
+      
+      if (filterConditions) {
+        query += ` [${filterConditions}]`;
+      }
     }
     
-    // Use the CORS-enabled API endpoint
-    const url = `https://${projectId}.api.sanity.io/v${apiVersion}/data/query/${dataset}?query=${query}`;
+    // Add sorting
+    query += ' | order(orderRank asc)';
+    
+    // Define fields to include
+    query += ' { _id, title, description, price, orderRank';
+    
+    // Add special fields based on document type
+    if (config.documentType === 'signatureCocktailItem') {
+      query += ', cocktailTags[]->{ _id, name }, isAlcoholFree, isNew';
+    } else if (config.documentType === 'regularCocktailItem') {
+      query += ', category';
+    } else if (config.documentType === 'wineItem') {
+      query += ', category';
+    } else if (config.documentType === 'beerItem') {
+      query += ', category';
+    } else if (config.documentType === 'spiritItem') {
+      query += ', subCategory, variants[]{ _key, size, price }';
+    }
+    
+    query += ' }';
+    
+    if (config.documentType === 'signatureCocktailItem') {
+      console.log(`Signature cocktail query for ${config.name}:`, query);
+    }
+    
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://${projectId}.api.sanity.io/v${apiVersion}/data/query/${dataset}?query=${encodedQuery}`;
     
     // Fetch data using standard fetch API
     fetch(url)
@@ -197,24 +195,48 @@
   function processMenuData(data, container, config) {
     const menuItems = data.result || [];
     
+    // Minimal debug logging for signature cocktails
+    if (config.documentType === 'signatureCocktailItem') {
+      console.log(`${config.name}: Received ${menuItems.length} cocktails, isAlcoholFree=${config.filter?.isAlcoholFree}`);
+    }
+    
     if (!menuItems || menuItems.length === 0) {
-      container.innerHTML = createEmptyMessage(config.name);
+      container.innerHTML = '';
+      container.appendChild(createEmptyMessage(config.name));
       return;
     }
     
-    // Choose the appropriate rendering method based on template
-    if (config.template === 'cocktail') {
-      renderCocktailItems(container, menuItems, config);
+    // For signature cocktails, we already applied the filtering in the query
+    let filteredItems = menuItems;
+    
+    // For other document types, apply filtering if needed
+    if (config.documentType !== 'signatureCocktailItem' && config.filter) {
+      filteredItems = menuItems.filter(item => {
+        return Object.entries(config.filter).every(([key, value]) => {
+          return item[key] === value;
+        });
+      });
+      
+      if (filteredItems.length === 0) {
+        container.innerHTML = '';
+        container.appendChild(createEmptyMessage(config.name));
+        return;
+      }
+    }
+    
+    // Render based on template type
+    if (config.template === 'standard') {
+      renderStandardMenuItems(container, filteredItems, config);
+    } else if (config.template === 'cocktail') {
+      renderCocktailItems(container, filteredItems, config);
     } else if (config.template === 'regularCocktail') {
-      renderRegularCocktailItems(container, menuItems, config);
+      renderRegularCocktailItems(container, filteredItems, config);
     } else if (config.template === 'wine') {
-      renderWineItems(container, menuItems, config);
+      renderWineItems(container, filteredItems, config);
     } else if (config.template === 'beer') {
-      renderBeerItems(container, menuItems, config);
+      renderBeerItems(container, filteredItems, config);
     } else if (config.template === 'spirit') {
-      renderSpiritItems(container, menuItems, config);
-    } else {
-      renderStandardMenuItems(container, menuItems, config);
+      renderSpiritItems(container, filteredItems, config);
     }
     
     console.log(`Successfully rendered ${config.name} data`);
@@ -1339,11 +1361,21 @@
       documentType: 'juiceItem',
       template: 'standard'
     },
+    // Configure alcoholic signature cocktails
     {
       name: 'signature cocktails',
       selector: '[data-liri-cocktails]',
       documentType: 'signatureCocktailItem',
-      template: 'cocktail'
+      template: 'cocktail',
+      filter: { isAlcoholFree: false }
+    },
+    // Configure non-alcoholic signature cocktails
+    {
+      name: 'non-alcoholic cocktails',
+      selector: '[data-liri-non-alcoholic-cocktails]',
+      documentType: 'signatureCocktailItem',
+      template: 'cocktail',
+      filter: { isAlcoholFree: true }
     },
     {
       name: 'regular cocktails',
@@ -1369,14 +1401,21 @@
       documentType: 'spiritItem',
       template: 'spirit'
     }
-    // Add more menu sections as needed:
-    // { name: 'spirits', selector: '[data-liri-spirits]', documentType: 'spiritItem', template: 'standard' }
   ];
   
   // Function to initialize all menu sections
   function initializeMenus() {
     // First, check the wine container situation and fix any case mismatches
     fixWineContainerAttributes();
+    
+    // Clear any old caches to ensure we get fresh data
+    if (CACHE_ENABLED) {
+      try {
+        localStorage.removeItem(getCacheKey('signatureCocktailItem'));
+      } catch (e) {
+        console.warn('Failed to clear signature cocktail cache:', e);
+      }
+    }
     
     menuConfigs.forEach(config => {
       if (document.querySelector(config.selector)) {
