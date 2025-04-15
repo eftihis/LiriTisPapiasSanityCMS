@@ -170,11 +170,7 @@
     query += ' }';
     
     // Add logging for debugging wine and beer queries
-    if (config.documentType === 'wineItem') {
-      console.log(`Wine query for ${config.name}:`, query);
-    } else if (config.documentType === 'beerItem') {
-      console.log(`Beer query for ${config.name}:`, query);
-    } else if (config.documentType === 'signatureCocktailItem') {
+    if (config.documentType === 'signatureCocktailItem') {
       console.log(`Signature cocktail query for ${config.name}:`, query);
     }
     
@@ -190,13 +186,6 @@
         return response.json();
       })
       .then(data => {
-        // Log the first few items for wine and beer
-        if (config.documentType === 'wineItem') {
-          console.log(`Wine data for ${config.name}:`, data.result.slice(0, 2));
-        } else if (config.documentType === 'beerItem') {
-          console.log(`Beer data for ${config.name}:`, data.result.slice(0, 2));
-        }
-        
         saveToCache(config.documentType, data);
         processMenuData(data, container, config);
       })
@@ -733,8 +722,6 @@
     
     // If no category containers exist, we'll create them all in the main container
     if (needToCreateCategoryContainers) {
-      console.log("No wine category containers found - creating them in the main container");
-      
       // Clear the main container
       container.innerHTML = '';
       
@@ -791,7 +778,6 @@
       
       // Find the container for this category using the correct attribute
       const categorySelector = `[data-liri-${category}]`;
-      console.log(`Searching for wine container with selector: ${categorySelector}`);
       let categoryContainer = document.querySelector(categorySelector);
       
       // Try different selector variations if needed
@@ -808,7 +794,6 @@
         for (const altSelector of alternativeSelectors) {
           const altContainer = document.querySelector(altSelector);
           if (altContainer) {
-            console.log(`Found container with alternative selector: ${altSelector}`);
             categoryContainer = altContainer;
             break;
           }
@@ -868,9 +853,6 @@
         // Format bottle price if available
         const bottlePrice = typeof wine.bottlePrice === 'number' ? 
           wine.bottlePrice.toFixed(2).replace('.', ',') : '';
-        
-        // Debug log for wine pricing - remove after confirming fixed
-        console.log(`Wine price debug - ${wine.title?.en || 'Unknown wine'}: glassPrice=${wine.glassPrice}, bottlePrice=${wine.bottlePrice}`);
         
         // Combine prices for display
         if (glassPrice && bottlePrice) {
@@ -963,15 +945,10 @@
       categorizedBeers[category] = [];
     });
     
-    // Add debugging for beer items
-    console.log(`Processing ${beerItems.length} beer items:`, beerItems.slice(0, 2));
-    
     // Group beers by their type with strict categorization
     beerItems.forEach(beer => {
       // Get the beerType directly from the schema field
       let rawCategory = beer.beerType || '';
-      
-      console.log(`Beer item ${beer.title?.en || 'Unknown'} has beerType: '${rawCategory}'`);
       
       // Strict category handling - only 'local' or default to 'imported'
       let category = 'imported'; // Default to imported
@@ -995,7 +972,6 @@
     for (const category in categorizedBeers) {
       const count = categorizedBeers[category].length;
       totalBeers += count;
-      console.log(`Category ${category} has ${count} beers`);
     }
     
     if (totalBeers === 0) {
@@ -1019,8 +995,6 @@
     
     // If no category containers exist, we'll create them all in the main container
     if (needToCreateCategoryContainers) {
-      console.log("No beer category containers found - creating them in the main container");
-      
       // Clear the main container
       container.innerHTML = '';
       
@@ -1077,7 +1051,6 @@
       
       // Find the container for this category using the correct attribute
       const categorySelector = `[data-liri-beer-${category}]`;
-      console.log(`Searching for beer container with selector: ${categorySelector}`);
       let categoryContainer = document.querySelector(categorySelector);
       
       // Try different selector variations if needed
@@ -1094,7 +1067,6 @@
         for (const altSelector of alternativeSelectors) {
           const altContainer = document.querySelector(altSelector);
           if (altContainer) {
-            console.log(`Found container with alternative selector: ${altSelector}`);
             categoryContainer = altContainer;
             break;
           }
