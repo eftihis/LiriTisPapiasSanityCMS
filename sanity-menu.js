@@ -149,24 +149,32 @@
     query += ' | order(orderRank asc)';
     
     // Define fields to include
-    query += ' { _id, title, description, price, orderRank';
+    query += ' { _id, title, description, orderRank';
     
     // Add special fields based on document type
     if (config.documentType === 'signatureCocktailItem') {
-      query += ', cocktailTags[]->{ _id, name }, isAlcoholFree, isNew';
+      query += ', cocktailTags[]->{ _id, name }, isAlcoholFree, isNew, price';
     } else if (config.documentType === 'regularCocktailItem') {
-      query += ', category';
+      query += ', category, price';
     } else if (config.documentType === 'wineItem') {
-      query += ', subCategory, glassPrice, bottlePrice, grapeVarieties';
+      query += ', subCategory, grapeVarieties, glassPrice, bottlePrice';
     } else if (config.documentType === 'beerItem') {
       query += ', beerType, size, price';
     } else if (config.documentType === 'spiritItem') {
       query += ', subCategory, variants[]{ _key, size, price }';
+    } else {
+      // For standard menu items
+      query += ', price';
     }
     
     query += ' }';
     
-    if (config.documentType === 'signatureCocktailItem') {
+    // Add logging for debugging wine and beer queries
+    if (config.documentType === 'wineItem') {
+      console.log(`Wine query for ${config.name}:`, query);
+    } else if (config.documentType === 'beerItem') {
+      console.log(`Beer query for ${config.name}:`, query);
+    } else if (config.documentType === 'signatureCocktailItem') {
       console.log(`Signature cocktail query for ${config.name}:`, query);
     }
     
@@ -182,6 +190,13 @@
         return response.json();
       })
       .then(data => {
+        // Log the first few items for wine and beer
+        if (config.documentType === 'wineItem') {
+          console.log(`Wine data for ${config.name}:`, data.result.slice(0, 2));
+        } else if (config.documentType === 'beerItem') {
+          console.log(`Beer data for ${config.name}:`, data.result.slice(0, 2));
+        }
+        
         saveToCache(config.documentType, data);
         processMenuData(data, container, config);
       })
@@ -210,7 +225,21 @@
     let filteredItems = menuItems;
     
     // For other document types, apply filtering if needed
-    if (config.documentType !== 'signatureCocktailItem' && config.filter) {
+    if (config.documentType === 'beerItem' && config.filter) {
+      filteredItems = menuItems.filter(item => {
+        // Special case for beer filtering
+        if (config.filter.beerType) {
+          return item.beerType === config.filter.beerType;
+        }
+        return true;
+      });
+      
+      if (filteredItems.length === 0) {
+        container.innerHTML = '';
+        container.appendChild(createEmptyMessage(config.name));
+        return;
+      }
+    } else if (config.documentType !== 'signatureCocktailItem' && config.filter) {
       filteredItems = menuItems.filter(item => {
         return Object.entries(config.filter).every(([key, value]) => {
           return item[key] === value;
@@ -836,9 +865,12 @@
         const glassPrice = typeof wine.glassPrice === 'number' ? 
           wine.glassPrice.toFixed(2).replace('.', ',') : '';
         
-        // Format bottle price
+        // Format bottle price if available
         const bottlePrice = typeof wine.bottlePrice === 'number' ? 
           wine.bottlePrice.toFixed(2).replace('.', ',') : '';
+        
+        // Debug log for wine pricing - remove after confirming fixed
+        console.log(`Wine price debug - ${wine.title?.en || 'Unknown wine'}: glassPrice=${wine.glassPrice}, bottlePrice=${wine.bottlePrice}`);
         
         // Combine prices for display
         if (glassPrice && bottlePrice) {
@@ -916,8 +948,6 @@
       }
     });
     
-    // No need to show error about missing containers since we'll create them if needed
-    
     // Group beers by their type
     const categorizedBeers = {};
     
@@ -933,10 +963,15 @@
       categorizedBeers[category] = [];
     });
     
+    // Add debugging for beer items
+    console.log(`Processing ${beerItems.length} beer items:`, beerItems.slice(0, 2));
+    
     // Group beers by their type with strict categorization
     beerItems.forEach(beer => {
       // Get the beerType directly from the schema field
       let rawCategory = beer.beerType || '';
+      
+      console.log(`Beer item ${beer.title?.en || 'Unknown'} has beerType: '${rawCategory}'`);
       
       // Strict category handling - only 'local' or default to 'imported'
       let category = 'imported'; // Default to imported
@@ -946,7 +981,7 @@
         category = 'local';
       }
       
-      // If beer has a valid category, add it to that category
+      // Add to category
       if (categorizedBeers.hasOwnProperty(category)) {
         categorizedBeers[category].push(beer);
       } else {
@@ -1442,6 +1477,22 @@
       documentType: 'wineItem',
       template: 'wine'
     },
+    // Add specific configurations for each beer type
+    {
+      name: 'local beer',
+      selector: '[data-liri-beer-local]',
+      documentType: 'beerItem',
+      template: 'beer',
+      filter: { beerType: 'local' }
+    },
+    {
+      name: 'imported beer',
+      selector: '[data-liri-beer-imported]',
+      documentType: 'beerItem',
+      template: 'beer',
+      filter: { beerType: 'imported' }
+    },
+    // Keep the general beer config
     {
       name: 'beer',
       selector: '[data-liri-beer]',
@@ -1464,13 +1515,27 @@
     // Clear any old caches to ensure we get fresh data
     if (CACHE_ENABLED) {
       try {
-        localStorage.removeItem(getCacheKey('signatureCocktailItem'));
+        localStorage.clear(); // Clear all cached data to ensure fresh loading
       } catch (e) {
-        console.warn('Failed to clear signature cocktail cache:', e);
+        console.warn('Failed to clear cache:', e);
       }
     }
     
-    menuConfigs.forEach(config => {
+    // Load beer-specific configs first to ensure they take precedence
+    const beerSpecificConfigs = menuConfigs.filter(config => 
+      config.documentType === 'beerItem' && config.filter && config.filter.beerType
+    );
+    
+    beerSpecificConfigs.forEach(config => {
+      if (document.querySelector(config.selector)) {
+        loadMenuItems(config);
+      }
+    });
+    
+    // Load the rest of the configs
+    menuConfigs.filter(config => 
+      !(config.documentType === 'beerItem' && config.filter && config.filter.beerType)
+    ).forEach(config => {
       if (document.querySelector(config.selector)) {
         loadMenuItems(config);
       }
