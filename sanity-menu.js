@@ -6,7 +6,7 @@
   
   // Cache configuration
   const CACHE_ENABLED = true;
-  const CACHE_EXPIRATION = 3600000; // Cache expiration in milliseconds (1 hour)
+  const CACHE_EXPIRATION = 1800000; // Cache expiration in milliseconds (30 minutes)
   const CACHE_VERSION = '1.0'; // Used to invalidate cache when the structure changes
   
   // Cache helper functions
