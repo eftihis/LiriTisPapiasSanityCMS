@@ -560,7 +560,11 @@
         // Add each flavor tag
         cocktail.cocktailTags.forEach(tag => {
           let tagName = '';
-          if (tag.name) {
+          if (tag.name && typeof tag.name === 'object' && tag.name.en) {
+            // New structure with object and translations
+            tagName = tag.name.en;
+          } else if (tag.name && typeof tag.name === 'string') {
+            // Legacy structure with string
             tagName = tag.name;
           } else {
             return; // Skip invalid tag
